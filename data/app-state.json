@@ -1,0 +1,270 @@
+{
+  "version": 7,
+  "profile": {
+    "name": "Riley LaMar",
+    "phone": "(616) 238-2965",
+    "email": "Riley.neeselamar@gmail.com",
+    "address": "800 Spring Ave NE, Grand Rapids, MI 49503",
+    "notes": "Age 36. No valid driver's license. Interests: emergency dispatch, phlebotomy, CNA, childcare, interpersonal helping roles (floor $22/hr). Dispensary/budtender: $15/hr base OK with tips. Resumes on file: helping-roles pivot PDF + budtender PDF + NOXX Cookies GM PDF. Job Hub PWA tracks search.",
+    "avatarDataUrl": ""
+  },
+  "resume": {
+    "targetRole": "Budtender",
+    "summary": "Hospitality pro with 14+ years high-volume guest service, product recommendations, and sales energy. Lead bartender and trainer; 2.5 years Crumbl Shift Manager. Proven consistent cash handler trusted with company tills, closing drawers, and POS integrity - accurate, ethical, no shortcuts. Calm under pressure; pursuing budtender / cannabis retail and open to store leadership.",
+    "education": "High school diploma; community college coursework",
+    "strengths": [
+      "Cash handling",
+      "Training/coaching",
+      "De-escalation",
+      "High-volume hospitality",
+      "POS accuracy",
+      "Guest experience",
+      "Shift leadership"
+    ],
+    "jobs": [
+      {
+        "id": "exp-1",
+        "employer": "Buffalo Wild Wings - 8 Ionia",
+        "title": "Lead Bartender & Lead Trainer",
+        "roleType": "Leadership",
+        "startMonth": "09",
+        "startYear": "2024",
+        "endMonth": "",
+        "endYear": "",
+        "current": true,
+        "bullets": [
+          "Returned to the same 8 Ionia location as Lead Bartender & Lead Trainer for high-volume service",
+          "Guide guests through product knowledge and recommendations; train staff on standards and guest recovery",
+          "Trusted with company cash, tills, closing drawers, and POS integrity - accurate and ethical under pressure"
+        ]
+      },
+      {
+        "id": "exp-2",
+        "employer": "Crumbl Cookies",
+        "title": "Shift Manager",
+        "roleType": "Leadership",
+        "startMonth": "03",
+        "startYear": "2022",
+        "endMonth": "09",
+        "endYear": "2024",
+        "current": false,
+        "bullets": [
+          "Ran shifts end-to-end: labor pacing, opening/closing, and guest flow in a high-volume retail bakery",
+          "Trained and coached crew on standards, food safety, and guest experience",
+          "Owned till/closeout accuracy and handled guest concerns calmly and professionally"
+        ]
+      },
+      {
+        "id": "exp-3",
+        "employer": "Bestside Bar",
+        "title": "Lead Bartender",
+        "roleType": "Bartending",
+        "startMonth": "01",
+        "startYear": "2019",
+        "endMonth": "03",
+        "endYear": "2022",
+        "current": false,
+        "bullets": [
+          "Led the bar through busy service nights with composure and clear team direction",
+          "De-escalated conflict while keeping service moving and guests safe",
+          "Owned till closeouts and mentored staff on speed, accuracy, and guest guidance"
+        ]
+      },
+      {
+        "id": "exp-4",
+        "employer": "Westside Social, Tip Top Deluxe, Put Putts",
+        "title": "Bartender",
+        "roleType": "Bartending",
+        "startMonth": "01",
+        "startYear": "2017",
+        "endMonth": "12",
+        "endYear": "2019",
+        "current": false,
+        "bullets": [
+          "Bartended across multiple Grand Rapids venues with consistent composure in high volume",
+          "Maintained POS and cash accuracy night after night",
+          "Built repeat guest relationships through attentive service and product guidance"
+        ]
+      },
+      {
+        "id": "exp-5",
+        "employer": "Buffalo Wild Wings - 8 Ionia",
+        "title": "Team Member/Bartender",
+        "roleType": "Bartending",
+        "startMonth": "02",
+        "startYear": "2012",
+        "endMonth": "06",
+        "endYear": "2017",
+        "current": false,
+        "bullets": [
+          "5+ years tenure at the same location; grew from team member into bartender",
+          "Delivered consistent high-volume guest service and built trusted guest relationships",
+          "Trusted with cash handling, tabs, and POS fundamentals - accurate and reliable"
+        ]
+      }
+    ],
+    "skillsText": "Cash handling, Training/coaching, De-escalation, High-volume hospitality, POS accuracy, Guest experience, Shift leadership"
+  },
+  "applications": [
+    {
+      "id": "app-1",
+      "company": "NOXX + COOKIES",
+      "role": "Cookies Dispensary General Manager, Ann St",
+      "location": "330 Ann St NW, Grand Rapids, MI",
+      "pay": "$60-65k/yr + monthly bonuses up to $18k",
+      "status": "Applied",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Gusto submitted SUCCESS. GM resume used.",
+      "important": true
+    },
+    {
+      "id": "app-2",
+      "company": "NOXX + COOKIES",
+      "role": "General Manager, Plainfield",
+      "location": "1234 Plainfield Ave NE, Grand Rapids, MI",
+      "pay": "$55-60k",
+      "status": "Applied",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Gusto thank-you received. GM resume used.",
+      "important": true
+    },
+    {
+      "id": "app-3",
+      "company": "NOXX + COOKIES",
+      "role": "Budtender, Cookies Ann St",
+      "location": "330 Ann St NW, Grand Rapids, MI",
+      "pay": "$15/hr",
+      "status": "Applied",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Gusto application submitted. Budtender resume used.",
+      "important": false
+    },
+    {
+      "id": "app-4",
+      "company": "NOXX + COOKIES",
+      "role": "Budtender, 28th St",
+      "location": "2440 28th St SE, Grand Rapids, MI",
+      "pay": "$15/hr",
+      "status": "Applied",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Gusto application submitted. Budtender resume used.",
+      "important": false
+    },
+    {
+      "id": "app-5",
+      "company": "Timber / Stash Ventures",
+      "role": "Cannabis Consultant (Budtender), Ann St",
+      "location": "Ann St, Grand Rapids, MI",
+      "pay": "",
+      "status": "Applied",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Applied via Stash/HR Alliance. Budtender resume used.",
+      "important": false
+    },
+    {
+      "id": "app-6",
+      "company": "Kent County Sheriff",
+      "role": "911 Dispatcher ECO I",
+      "location": "701 Ball Ave NE, Grand Rapids, MI",
+      "pay": "$22.78/hr",
+      "status": "On Hold",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Flyer requires valid DL; Riley has none. Deadline Sep 18 2026. Keep as option if DL obtained. Typing 25 wpm; nights 7p-7a possible.",
+      "important": false
+    },
+    {
+      "id": "app-7",
+      "company": "Crafted Leaf",
+      "role": "Receptionist/Budtender",
+      "location": "801 Michigan St NE, Grand Rapids, MI (~0.5 mi from Spring)",
+      "pay": "$15-16/hr",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "mailto:Info@CraftedLeafCannabis.com",
+      "notes": "Email-only apply to Info@CraftedLeafCannabis.com - not emailed yet.",
+      "important": false
+    },
+    {
+      "id": "app-8",
+      "company": "Ascend Wellness",
+      "role": "Dispensary Associate PT Century Ave",
+      "location": "503 Century Ave SW, Grand Rapids, MI",
+      "pay": "",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Listing seen; Scribner FT was closed.",
+      "important": false
+    },
+    {
+      "id": "app-9",
+      "company": "House of Dank",
+      "role": "Budtender",
+      "location": "3510 E Mall Dr SE, Grand Rapids, MI",
+      "pay": "$14-15/hr + tips",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Researching budtender opening.",
+      "important": false
+    },
+    {
+      "id": "app-10",
+      "company": "High Profile",
+      "role": "Inventory Lead",
+      "location": "44th St, Grand Rapids, MI",
+      "pay": "",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Ops/inventory/compliance fit worth watching.",
+      "important": false
+    },
+    {
+      "id": "app-11",
+      "company": "Fluresh",
+      "role": "Cannabis Adviser",
+      "location": "1213 Phillips Ave SW, Grand Rapids, MI",
+      "pay": "",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Indeed login wall blocked apply.",
+      "important": false
+    },
+    {
+      "id": "app-12",
+      "company": "CNA pathway (employer-paid)",
+      "role": "WellBridge RA-to-CNA / Corewell Unit Aide-to-CNA / GRCC via West Michigan Works",
+      "location": "Grand Rapids, MI",
+      "pay": "Path to $22+/hr",
+      "status": "Researching",
+      "appliedDate": "2026-09-05",
+      "url": "",
+      "notes": "Pathway to $22+ helping roles without upfront tuition.",
+      "important": false
+    }
+  ],
+  "calendarEvents": [],
+  "diary": {
+    "interests": "Emergency dispatch, phlebotomy, CNA, childcare, helping people face-to-face. Cannabis retail / budtender as a bridge. Training and coaching others.",
+    "patterns": "Thrives in high-volume hospitality; trusted with cash and closing. Calm under pressure; de-escalation. Strong when leading a shift or training new people. No driver\u2019s license shapes commute-friendly roles.",
+    "desires": "Helping careers around $22+/hr long-term. Near-term budtender OK at ~$15 base with tips. Want steady day-to-day rhythm, not just polishing a resume.",
+    "entries": [
+      {
+        "id": "diary-1",
+        "date": "2026-09-05",
+        "mood": "Focused",
+        "title": "Hunt kickoff",
+        "body": "Applied to several NOXX / Cookies and Timber/Stash roles near Spring Ave. Cork board + calendar feel more useful than staring at resume edits.",
+        "important": false
+      }
+    ]
+  }
+}

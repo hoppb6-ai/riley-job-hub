@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f3d24">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Job Hub">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Riley Job Hub — applications board, calendar, and day-to-day diary.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Riley Job Hub</title>
+</head>
+<body>
+  <div class="pin-lock" id="pinLock" hidden>
+    <div class="pin-card" id="pinCard">
+      <h1>Riley Job Hub</h1>
+      <p class="pin-sub">Enter PIN to open the board</p>
+      <div class="pin-dots" id="pinDots" aria-hidden="true">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <p class="pin-error" id="pinError" hidden>Wrong PIN — try again</p>
+      <div class="pin-pad" id="pinPad">
+        <button type="button" class="pin-key" data-pin="1">1</button>
+        <button type="button" class="pin-key" data-pin="2">2</button>
+        <button type="button" class="pin-key" data-pin="3">3</button>
+        <button type="button" class="pin-key" data-pin="4">4</button>
+        <button type="button" class="pin-key" data-pin="5">5</button>
+        <button type="button" class="pin-key" data-pin="6">6</button>
+        <button type="button" class="pin-key" data-pin="7">7</button>
+        <button type="button" class="pin-key" data-pin="8">8</button>
+        <button type="button" class="pin-key" data-pin="9">9</button>
+        <button type="button" class="pin-key spacer" disabled></button>
+        <button type="button" class="pin-key" data-pin="0">0</button>
+        <button type="button" class="pin-key" data-pin="del" aria-label="Delete">⌫</button>
+      </div>
+    </div>
+  </div>
+  <div class="app" id="appShell" hidden>
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="logo" aria-hidden="true">R</div>
+        <div class="brand">
+          <h1>Riley Job Hub</h1>
+          <p>Day-to-day board · calendar · diary</p>
+        </div>
+      </div>
+      <div class="org-path" id="orgPath" aria-label="App path">
+        <span data-path="board">Board</span>
+        <span data-path="calendar">Calendar</span>
+        <span data-path="diary">Diary</span>
+        <span data-path="more">More</span>
+      </div>
+      <div class="ios-tip" id="iosTip">
+        <button type="button" id="dismissTip" aria-label="Dismiss tip">&times;</button>
+        On iPhone Safari: tap Share, then <strong>Add to Home Screen</strong> for the full app.
+      </div>
+    </header>
+
+    <main>
+
+      
+      <section class="tab-panel" id="panel-board" data-tab="board">
+        <div class="board-wrap">
+          <div class="board-head">
+            <h2>Applications</h2>
+            <p>Active apps on the board. Status, countdown, and Important stay visible. Auto-archives after <strong>30 days</strong>.</p>
+            <div class="btn-row" style="margin-top:10px;">
+              <button type="button" class="primary small" id="btnAddFromBoard">+ Application</button>
+              <button type="button" class="small" data-jump="calendar">Calendar</button>
+              <button type="button" class="small ghost" data-jump="jobs">Full list</button>
+            </div>
+          </div>
+          <div class="board-list" id="corkBoard" aria-label="Active applications"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-calendar" data-tab="calendar" hidden>
+        <div class="view-toggle" role="tablist" aria-label="Calendar view">
+          <button type="button" class="view-toggle-btn active" data-cal-view="edit" aria-selected="true">Edit</button>
+          <button type="button" class="view-toggle-btn" data-cal-view="paper" aria-selected="false">Paper</button>
+        </div>
+
+        <div id="calendarEdit">
+          <div class="card path-card">
+            <h2>Day to day</h2>
+            <p>Plan follow-ups, interviews, and check-ins. The board stays home for what’s applied.</p>
+            <div class="path-steps">
+              <button type="button" class="path-step" data-jump="board"><strong>Board</strong><span>Active applications</span></button>
+              <button type="button" class="path-step" data-jump="diary"><strong>Diary</strong><span>Interests &amp; patterns</span></button>
+              <button type="button" class="path-step" data-jump="jobs"><strong>List</strong><span>Filter &amp; edit apps</span></button>
+              <button type="button" class="path-step" data-jump="more"><strong>More</strong><span>Resume when needed</span></button>
+            </div>
+          </div>
+
+          <div class="month-cal" id="monthCal">
+            <div class="cal-toolbar">
+              <button type="button" class="ghost small" id="calPrev" aria-label="Previous month">‹</button>
+              <div class="cal-title-block">
+                <strong id="calTitle">Month</strong>
+                <button type="button" class="ghost small" id="calToday">Today</button>
+              </div>
+              <button type="button" class="ghost small" id="calNext" aria-label="Next month">›</button>
+            </div>
+            <div class="cal-weekdays" aria-hidden="true">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            </div>
+            <div class="cal-grid" id="calGrid" role="grid" aria-label="Applications calendar"></div>
+          </div>
+
+          <ul class="cal-legend">
+            <li><span class="cal-dot" data-status="Applied"></span> Applied</li>
+            <li><span class="cal-dot" data-status="Interview"></span> Interview</li>
+            <li><span class="cal-dot" data-status="Researching"></span> Researching</li>
+            <li><span class="cal-dot" data-status="Offer"></span> Offer</li>
+          </ul>
+
+          <div class="day-agenda" id="dayAgenda">
+            <div class="day-agenda-head">
+              <h3 id="agendaTitle">Select a day</h3>
+              <button type="button" class="primary small" id="btnAddJobFromCal">+ Application</button>
+            </div>
+            <div id="agendaList"></div>
+          </div>
+        </div>
+
+        <div id="calendarPaper" hidden>
+          <div class="paper-toolbar">
+            <button type="button" class="primary" id="btnPrintCalendar">Print</button>
+          </div>
+          <div class="paper-stack" id="calendarPaperStack"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-profile" data-tab="profile" hidden>
+        <div class="view-toggle" role="tablist" aria-label="Profile view">
+          <button type="button" class="view-toggle-btn active" data-profile-view="edit" aria-selected="true">Edit</button>
+          <button type="button" class="view-toggle-btn" data-profile-view="paper" aria-selected="false">Paper</button>
+        </div>
+
+        <div id="profileEdit">
+          <div class="card">
+            <div class="section-title"><h2>Profile</h2></div>
+            <form id="profileForm" autocomplete="on">
+              <label for="p-name">Name</label>
+              <input id="p-name" name="name" type="text" maxlength="80" required>
+
+              <label for="p-phone">Phone</label>
+              <input id="p-phone" name="phone" type="tel" maxlength="40">
+
+              <label for="p-email">Email</label>
+              <input id="p-email" name="email" type="email" maxlength="120">
+
+              <label for="p-address">Address</label>
+              <input id="p-address" name="address" type="text" maxlength="160">
+
+              <label for="p-notes">Notes</label>
+              <textarea id="p-notes" name="notes" maxlength="500" rows="3"></textarea>
+
+              <div class="btn-row">
+                <button type="submit" class="primary">Save profile</button>
+                <button type="button" class="ghost" id="btnResetServer">Reset from server data</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>Backup</h2>
+            <p style="margin:0 0 10px;color:var(--muted);font-size:.88rem;">Export or import all local data as JSON.</p>
+            <div class="btn-row">
+              <button type="button" id="btnExport">Export JSON</button>
+              <button type="button" id="btnImport">Import JSON</button>
+              <input type="file" id="importFile" accept="application/json,.json" hidden>
+            </div>
+          </div>
+        </div>
+
+        <div id="profilePaper" hidden>
+          <div class="paper-toolbar">
+            <button type="button" class="primary" id="btnPrintProfile">Print</button>
+          </div>
+          <div class="paper-stack" id="profilePaperStack"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-resume" data-tab="resume" hidden>
+        <div class="view-toggle" role="tablist" aria-label="Profile & Resume view">
+          <button type="button" class="view-toggle-btn active" id="btnResumeEdit" data-resume-view="edit" aria-selected="true">Edit</button>
+          <button type="button" class="view-toggle-btn" id="btnResumePaper" data-resume-view="paper" aria-selected="false">Paper</button>
+        </div>
+
+        <div id="resumeEdit">
+          <div class="card">
+            <div class="section-title"><h2>Identity</h2></div>
+            <p style="margin:0 0 12px;color:var(--muted);font-size:.88rem;">Same layout as Projects Profile &amp; Resume — edits sync to Profile.</p>
+            <div class="avatar-row">
+              <button type="button" class="avatar-btn" id="btnAvatar" aria-label="Change photo">
+                <img id="avatarImg" class="avatar-img" alt="" hidden>
+                <span class="avatar-placeholder" id="avatarPh" aria-hidden="true">R</span>
+              </button>
+              <div class="avatar-actions">
+                <button type="button" class="small" id="btnAvatarPick">Add photo</button>
+                <button type="button" class="small ghost" id="btnAvatarClear" hidden>Remove</button>
+              </div>
+              <input type="file" id="avatarFile" accept="image/*" hidden>
+            </div>
+            <label for="r-name">Name</label>
+            <input id="r-name" type="text" maxlength="80">
+            <label for="r-phone">Phone</label>
+            <input id="r-phone" type="tel" maxlength="40">
+            <label for="r-email">Email</label>
+            <input id="r-email" type="email" maxlength="120">
+            <label for="r-address">Address</label>
+            <input id="r-address" type="text" maxlength="160">
+            <label for="r-notes">Bio / notes</label>
+            <textarea id="r-notes" rows="2" maxlength="500"></textarea>
+          </div>
+
+          <div class="card">
+            <div class="section-title"><h2>Resume</h2></div>
+            <p style="margin:0 0 10px;color:var(--muted);font-size:.88rem;">Paper prints US Letter from these fields + experience below.</p>
+            <label for="r-target">Target / headline</label>
+            <input id="r-target" type="text" maxlength="120" placeholder="e.g. Budtender / Store leadership">
+            <label for="r-summary">Summary</label>
+            <textarea id="r-summary" rows="3" maxlength="600"></textarea>
+            <label for="r-skills">Skills (comma or line separated)</label>
+            <textarea id="r-skills" rows="3" maxlength="400" placeholder="Cash handling, POS, training…"></textarea>
+            <label>Strength chips on resume</label>
+            <div class="chips" id="strengthChips"></div>
+            <label for="r-education">Education</label>
+            <textarea id="r-education" rows="3" maxlength="500"></textarea>
+            <div class="btn-row">
+              <button type="button" class="primary" id="btnSaveResumeMeta">Save profile &amp; resume</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">
+              <div>
+                <h2>Work experience</h2>
+                <p style="margin:4px 0 0;color:var(--muted);font-size:.8rem;">Newest first — use arrows to reorder</p>
+              </div>
+              <button type="button" class="small" id="btnAddExp">Add role</button>
+            </div>
+            <div class="accordion" id="experienceList"></div>
+          </div>
+        </div>
+
+        <div id="resumePaper" hidden>
+          <div class="paper-toolbar">
+            <button type="button" class="primary" id="btnPrintResume">Print</button>
+          </div>
+          <div class="paper-stack" id="resumePaperStack"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-jobs" data-tab="jobs" hidden>
+        <div class="view-toggle" role="tablist" aria-label="Jobs view">
+          <button type="button" class="view-toggle-btn active" data-jobs-view="edit" aria-selected="true">Edit</button>
+          <button type="button" class="view-toggle-btn" data-jobs-view="paper" aria-selected="false">Paper</button>
+        </div>
+
+        <div id="jobsEdit">
+          <div class="card jobs-breakdown" id="jobsBreakdown">
+            <div class="section-title"><h2>At a glance</h2></div>
+            <div class="status-chips" id="statusChips"></div>
+            <div class="status-bars" id="statusBars" aria-hidden="true"></div>
+            <div class="glance-scroll">
+              <table class="glance-table" id="glanceTable">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Pay</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                  </tr>
+                </thead>
+                <tbody id="glanceBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="filter-bar filter-bar-2">
+            <div>
+              <label for="jobBoardFilter">Board</label>
+              <select id="jobBoardFilter">
+                <option value="active">On board (active)</option>
+                <option value="archived">Archived (30+ days)</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+            <div>
+              <label for="jobFilter">Status</label>
+              <select id="jobFilter">
+                <option value="All">All</option>
+                <option>Researching</option>
+                <option>Applied</option>
+                <option>Interview</option>
+                <option>Offer</option>
+                <option>Rejected</option>
+                <option>On Hold</option>
+                <option>Withdrawn</option>
+              </select>
+            </div>
+            <button type="button" class="primary" id="btnAddJob">Add</button>
+          </div>
+          <div class="job-list" id="jobList"></div>
+        </div>
+
+        <div id="jobsPaper" hidden>
+          <div class="paper-toolbar">
+            <button type="button" class="primary" id="btnPrintJobs">Print</button>
+          </div>
+          <div class="paper-stack" id="jobsPaperStack"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-diary" data-tab="diary" hidden>
+        <div class="view-toggle" role="tablist" aria-label="Diary view">
+          <button type="button" class="view-toggle-btn active" data-diary-view="edit" aria-selected="true">Write</button>
+          <button type="button" class="view-toggle-btn" data-diary-view="paper" aria-selected="false">Paper</button>
+        </div>
+        <div id="diaryEdit">
+          <div class="card diary-day-nav">
+            <div class="cal-toolbar">
+              <button type="button" class="ghost small" id="diaryPrev" aria-label="Previous day">‹</button>
+              <div class="cal-title-block">
+                <strong id="diaryDayTitle">Today</strong>
+                <button type="button" class="ghost small" id="diaryToday">Today</button>
+              </div>
+              <button type="button" class="ghost small" id="diaryNext" aria-label="Next day">›</button>
+            </div>
+            <button type="button" class="small ghost" id="btnDiaryOpenCal" style="width:100%;margin-top:8px;">Jump from calendar month</button>
+          </div>
+
+          <div class="card diary-prompt-card">
+            <p class="diary-prompt" id="diaryPrompt">What&#39;s up?</p>
+            <textarea id="d-freewrite" rows="6" maxlength="2000" placeholder="Just write…"></textarea>
+            <label class="flag-row">
+              <input type="checkbox" id="d-important">
+              <span class="flag-swatch" aria-hidden="true"></span>
+              Flag as important
+            </label>
+            <div class="btn-row">
+              <button type="button" class="primary" id="btnSaveFreewrite">Save to this day</button>
+            </div>
+          </div>
+
+          <div class="card" id="diaryDayAppsCard">
+            <h2>On this day</h2>
+            <p style="margin:0 0 8px;color:var(--muted);font-size:.85rem;">Applications tied to this date — tap to open. Important ones glow.</p>
+            <div id="diaryDayApps" class="stream-list"></div>
+          </div>
+
+          <div class="card">
+            <h2>Today&#39;s notes</h2>
+            <div id="diaryList" class="diary-list"></div>
+          </div>
+
+          <details class="card catalogue-details">
+            <summary>Longer catalogue (interests · patterns · desires)</summary>
+            <label for="d-interests">Interests</label>
+            <textarea id="d-interests" rows="2" maxlength="800"></textarea>
+            <label for="d-patterns">Patterns</label>
+            <textarea id="d-patterns" rows="2" maxlength="800"></textarea>
+            <label for="d-desires">Desires</label>
+            <textarea id="d-desires" rows="2" maxlength="800"></textarea>
+            <div class="btn-row">
+              <button type="button" class="primary" id="btnSaveDiaryMeta">Save catalogue</button>
+            </div>
+          </details>
+        </div>
+        <div id="diaryPaper" hidden>
+          <div class="paper-toolbar">
+            <button type="button" class="primary" id="btnPrintDiary">Print</button>
+          </div>
+          <div class="paper-stack" id="diaryPaperStack"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-more" data-tab="more" hidden>
+        <div class="card path-card">
+          <h2>More</h2>
+          <p>Resume and profile live here so the home board stays about the hunt day-to-day.</p>
+          <div class="path-steps">
+            <button type="button" class="path-step" data-jump="resume"><strong>Resume</strong><span>Edit | Paper</span></button>
+            <button type="button" class="path-step" data-jump="profile"><strong>Profile</strong><span>Contact &amp; backup</span></button>
+            <button type="button" class="path-step" data-jump="jobs"><strong>Jobs list</strong><span>Filters &amp; details</span></button>
+            <button type="button" class="path-step" data-jump="board"><strong>Back to board</strong><span>Board home</span></button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Lock</h2>
+          <p style="margin:0 0 10px;color:var(--muted);font-size:.88rem;">Re-lock the app until PIN is entered again.</p>
+          <button type="button" class="danger" id="btnLockApp">Lock now</button>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="tabbar" role="tablist" aria-label="Main">
+      <button type="button" class="active" data-tab-btn="board" aria-selected="true">
+        <span class="ico" aria-hidden="true">B</span>Board
+      </button>
+      <button type="button" data-tab-btn="calendar" aria-selected="false">
+        <span class="ico" aria-hidden="true">C</span>Calendar
+      </button>
+      <button type="button" data-tab-btn="diary" aria-selected="false">
+        <span class="ico" aria-hidden="true">D</span>Diary
+      </button>
+      <button type="button" data-tab-btn="more" aria-selected="false">
+        <span class="ico" aria-hidden="true">⋯</span>More
+      </button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop" id="jobModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="jobModalTitle">
+      <h2 id="jobModalTitle">Application</h2>
+      <form id="jobForm">
+        <input type="hidden" id="j-id">
+        <label for="j-company">Company</label>
+        <input id="j-company" required maxlength="80">
+
+        <label for="j-role">Role</label>
+        <input id="j-role" required maxlength="100">
+
+        <label for="j-location">Location</label>
+        <input id="j-location" maxlength="100">
+
+        <label for="j-pay">Pay</label>
+        <input id="j-pay" maxlength="60" placeholder="$15/hr or $55-60k">
+
+        <div class="row-2">
+          <div>
+            <label for="j-status">Status</label>
+            <select id="j-status">
+              <option>Researching</option>
+              <option>Applied</option>
+              <option>Interview</option>
+              <option>Offer</option>
+              <option>Rejected</option>
+              <option>On Hold</option>
+              <option>Withdrawn</option>
+            </select>
+          </div>
+          <div>
+            <label for="j-date">Applied date</label>
+            <input id="j-date" type="date">
+          </div>
+        </div>
+
+        <label class="flag-row" style="margin-top:12px;">
+          <input type="checkbox" id="j-important">
+          <span class="flag-swatch" aria-hidden="true"></span>
+          Flag as important
+        </label>
+        <p class="archived-hint" id="j-archivedHint" hidden></p>
+        <label class="flag-row" id="j-keepRow" hidden>
+          <input type="checkbox" id="j-keepOnBoard">
+          <span></span>
+          Keep on board (pause 30-day archive)
+        </label>
+
+        <label for="j-url">URL</label>
+        <input id="j-url" type="url" maxlength="300" placeholder="https://">
+
+        <label for="j-notes">Notes</label>
+        <textarea id="j-notes" rows="3" maxlength="400"></textarea>
+
+        <div class="btn-row">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" class="ghost" id="btnCancelJob">Cancel</button>
+          <button type="button" class="danger" id="btnDeleteJob" hidden>Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
