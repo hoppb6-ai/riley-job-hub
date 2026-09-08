@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "profile": {
     "name": "Riley LaMar",
     "phone": "(616) 238-2965",
@@ -266,5 +266,14 @@
         "important": false
       }
     ]
+  },
+  "aspirations": {
+    "entries": []
+  },
+  "letterDrafts": [],
+  "currentLetter": {
+    "to": "",
+    "subject": "",
+    "body": ""
   }
 }

@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f3d24">
+  <meta name="theme-color" content="#0c2f1c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Job Hub">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="Riley Job Hub — applications board, calendar, and day-to-day diary.">
+  <meta name="description" content="Riley Job Hub — resume-first job search: applications, journal, aspirations, and draft letters.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -19,7 +19,7 @@
   <div class="pin-lock" id="pinLock" hidden>
     <div class="pin-card" id="pinCard">
       <h1>Riley Job Hub</h1>
-      <p class="pin-sub">Enter PIN to open the board</p>
+      <p class="pin-sub">Enter PIN to open</p>
       <div class="pin-dots" id="pinDots" aria-hidden="true">
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
@@ -41,19 +41,25 @@
       </div>
     </div>
   </div>
+
   <div class="app" id="appShell" hidden>
     <header class="topbar">
       <div class="topbar-row">
         <div class="logo" aria-hidden="true">R</div>
         <div class="brand">
           <h1>Riley Job Hub</h1>
-          <p>Day-to-day board · calendar · diary</p>
+          <p>Resume · jobs · journal · letters</p>
         </div>
+        <button type="button" class="resume-pill" id="btnResumePeek" aria-label="Peek resume">
+          <span class="resume-pill-ico" aria-hidden="true">📄</span>
+          Resume
+        </button>
       </div>
       <div class="org-path" id="orgPath" aria-label="App path">
-        <span data-path="board">Board</span>
-        <span data-path="calendar">Calendar</span>
-        <span data-path="diary">Diary</span>
+        <span data-path="home">Home</span>
+        <span data-path="board">Jobs</span>
+        <span data-path="resume">Resume</span>
+        <span data-path="diary">Journal</span>
         <span data-path="more">More</span>
       </div>
       <div class="ios-tip" id="iosTip">
@@ -64,8 +70,50 @@
 
     <main>
 
-      
-      <section class="tab-panel" id="panel-board" data-tab="board">
+      <section class="tab-panel" id="panel-home" data-tab="home">
+        <div class="home-hero">
+          <p class="home-kicker">Resume stays with you</p>
+          <h2 class="home-headline">What would you like to do?</h2>
+          <p class="home-sub">Your resume is the spine — peek it anytime from the orange pill or Resume tab.</p>
+        </div>
+        <div class="home-grid" role="navigation" aria-label="Main actions">
+          <button type="button" class="home-tile home-tile-spine" data-jump="resume">
+            <span class="home-tile-ico" aria-hidden="true">📄</span>
+            <strong>Resume</strong>
+            <span>Edit, paper, always available</span>
+          </button>
+          <button type="button" class="home-tile" data-jump="board">
+            <span class="home-tile-ico" aria-hidden="true">💼</span>
+            <strong>Jobs</strong>
+            <span>Board · applications · calendar</span>
+          </button>
+          <button type="button" class="home-tile" data-jump="diary">
+            <span class="home-tile-ico" aria-hidden="true">📝</span>
+            <strong>Journal</strong>
+            <span>Day notes · important flags</span>
+          </button>
+          <button type="button" class="home-tile" data-jump="aspirations">
+            <span class="home-tile-ico" aria-hidden="true">✨</span>
+            <strong>Aspirations</strong>
+            <span>What’s on my mind</span>
+          </button>
+          <button type="button" class="home-tile" data-jump="letter">
+            <span class="home-tile-ico" aria-hidden="true">✉️</span>
+            <strong>Draft Letter</strong>
+            <span>Cover · thank you · follow-up</span>
+          </button>
+        </div>
+        <div class="card home-resume-strip" id="homeResumeStrip">
+          <div class="section-title">
+            <h2>Resume at a glance</h2>
+            <button type="button" class="small" data-jump="resume">Open</button>
+          </div>
+          <p class="home-target" id="homeTarget">—</p>
+          <div class="chips" id="homeSkillChips"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-board" data-tab="board" hidden>
         <div class="board-wrap">
           <div class="board-head">
             <h2>Applications</h2>
@@ -74,9 +122,10 @@
               <button type="button" class="primary small" id="btnAddFromBoard">+ Application</button>
               <button type="button" class="small" data-jump="calendar">Calendar</button>
               <button type="button" class="small ghost" data-jump="jobs">Full list</button>
+              <button type="button" class="small ghost" id="btnBoardResumePeek">Peek resume</button>
             </div>
           </div>
-          <div class="board-list" id="corkBoard" aria-label="Active applications"></div>
+          <div class="board-list" id="jobBoard" aria-label="Active applications"></div>
         </div>
       </section>
 
@@ -89,12 +138,12 @@
         <div id="calendarEdit">
           <div class="card path-card">
             <h2>Day to day</h2>
-            <p>Plan follow-ups, interviews, and check-ins. The board stays home for what’s applied.</p>
+            <p>Plan follow-ups, interviews, and check-ins. Resume stays one tap away.</p>
             <div class="path-steps">
-              <button type="button" class="path-step" data-jump="board"><strong>Board</strong><span>Active applications</span></button>
-              <button type="button" class="path-step" data-jump="diary"><strong>Diary</strong><span>Interests &amp; patterns</span></button>
+              <button type="button" class="path-step" data-jump="board"><strong>Jobs</strong><span>Active applications</span></button>
+              <button type="button" class="path-step" data-jump="diary"><strong>Journal</strong><span>Notes &amp; patterns</span></button>
+              <button type="button" class="path-step" data-jump="resume"><strong>Resume</strong><span>Always available</span></button>
               <button type="button" class="path-step" data-jump="jobs"><strong>List</strong><span>Filter &amp; edit apps</span></button>
-              <button type="button" class="path-step" data-jump="more"><strong>More</strong><span>Resume when needed</span></button>
             </div>
           </div>
 
@@ -197,7 +246,7 @@
         <div id="resumeEdit">
           <div class="card">
             <div class="section-title"><h2>Identity</h2></div>
-            <p style="margin:0 0 12px;color:var(--muted);font-size:.88rem;">Same layout as Projects Profile &amp; Resume — edits sync to Profile.</p>
+            <p style="margin:0 0 12px;color:var(--muted);font-size:.88rem;">Resume stays present while you job-hunt — peek it from any screen.</p>
             <div class="avatar-row">
               <button type="button" class="avatar-btn" id="btnAvatar" aria-label="Change photo">
                 <img id="avatarImg" class="avatar-img" alt="" hidden>
@@ -323,7 +372,7 @@
       </section>
 
       <section class="tab-panel" id="panel-diary" data-tab="diary" hidden>
-        <div class="view-toggle" role="tablist" aria-label="Diary view">
+        <div class="view-toggle" role="tablist" aria-label="Journal view">
           <button type="button" class="view-toggle-btn active" data-diary-view="edit" aria-selected="true">Write</button>
           <button type="button" class="view-toggle-btn" data-diary-view="paper" aria-selected="false">Paper</button>
         </div>
@@ -385,15 +434,70 @@
         </div>
       </section>
 
+      <section class="tab-panel" id="panel-aspirations" data-tab="aspirations" hidden>
+        <div class="card">
+          <div class="section-title"><h2>Aspirations</h2></div>
+          <p class="aspirations-lead">What’s on my mind — goals, desires, and where you want to go. Separate from the day journal.</p>
+          <label for="a-freewrite">Free-write</label>
+          <textarea id="a-freewrite" rows="7" maxlength="3000" placeholder="What do I want next…?"></textarea>
+          <div class="btn-row">
+            <button type="button" class="primary" id="btnSaveAspiration">Save aspiration</button>
+            <button type="button" class="ghost small" id="btnAspirationsResumePeek">Peek resume</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Saved</h2>
+          <div id="aspirationsList" class="diary-list"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-letter" data-tab="letter" hidden>
+        <div class="card">
+          <div class="section-title">
+            <h2>Draft Letter</h2>
+            <button type="button" class="small" id="btnLetterResumePeek">Peek resume</button>
+          </div>
+          <p style="margin:0 0 10px;color:var(--muted);font-size:.88rem;">Templates + quick-insert from your resume. Open in Gmail when ready.</p>
+          <div class="template-chips" id="letterTemplates" role="group" aria-label="Letter templates">
+            <button type="button" class="chip" data-letter-tpl="cover">Cover letter</button>
+            <button type="button" class="chip" data-letter-tpl="thankyou">Thank you</button>
+            <button type="button" class="chip" data-letter-tpl="followup">Follow-up</button>
+          </div>
+          <label for="l-to">To</label>
+          <input id="l-to" type="email" maxlength="160" placeholder="hiring@company.com" autocomplete="email">
+          <label for="l-subject">Subject</label>
+          <input id="l-subject" type="text" maxlength="200" placeholder="Application for …">
+          <label for="l-body">Body</label>
+          <textarea id="l-body" rows="10" maxlength="8000" placeholder="Write your letter…"></textarea>
+          <div class="insert-bar">
+            <span class="insert-label">Insert from resume</span>
+            <div class="chips" id="letterInsertChips"></div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="primary" id="btnOpenGmail">Open in Gmail</button>
+            <button type="button" id="btnMailto">mailto</button>
+            <button type="button" class="ghost" id="btnCopyLetter">Copy</button>
+            <button type="button" class="ghost" id="btnDownloadLetter">Download .txt</button>
+            <button type="button" class="ghost" id="btnSaveLetterDraft">Save draft</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Saved drafts</h2>
+          <div id="letterDraftsList" class="stream-list"></div>
+        </div>
+      </section>
+
       <section class="tab-panel" id="panel-more" data-tab="more" hidden>
         <div class="card path-card">
           <h2>More</h2>
-          <p>Resume and profile live here so the home board stays about the hunt day-to-day.</p>
+          <p>Calendar, full job list, profile, and tools. Resume lives in the tab bar — always one tap away.</p>
           <div class="path-steps">
-            <button type="button" class="path-step" data-jump="resume"><strong>Resume</strong><span>Edit | Paper</span></button>
+            <button type="button" class="path-step" data-jump="calendar"><strong>Calendar</strong><span>Month &amp; agenda</span></button>
+            <button type="button" class="path-step" data-jump="jobs"><strong>Jobs list</strong><span>Filters &amp; archive</span></button>
             <button type="button" class="path-step" data-jump="profile"><strong>Profile</strong><span>Contact &amp; backup</span></button>
-            <button type="button" class="path-step" data-jump="jobs"><strong>Jobs list</strong><span>Filters &amp; details</span></button>
-            <button type="button" class="path-step" data-jump="board"><strong>Back to board</strong><span>Board home</span></button>
+            <button type="button" class="path-step" data-jump="aspirations"><strong>Aspirations</strong><span>What’s on my mind</span></button>
+            <button type="button" class="path-step" data-jump="letter"><strong>Draft Letter</strong><span>Gmail-ready</span></button>
+            <button type="button" class="path-step" data-jump="home"><strong>Home</strong><span>Hub</span></button>
           </div>
         </div>
         <div class="card">
@@ -405,20 +509,37 @@
 
     </main>
 
-    <nav class="tabbar" role="tablist" aria-label="Main">
-      <button type="button" class="active" data-tab-btn="board" aria-selected="true">
-        <span class="ico" aria-hidden="true">B</span>Board
+    <nav class="tabbar tabbar-5" role="tablist" aria-label="Main">
+      <button type="button" class="active" data-tab-btn="home" aria-selected="true">
+        <span class="ico" aria-hidden="true">⌂</span>Home
       </button>
-      <button type="button" data-tab-btn="calendar" aria-selected="false">
-        <span class="ico" aria-hidden="true">C</span>Calendar
+      <button type="button" data-tab-btn="board" aria-selected="false">
+        <span class="ico" aria-hidden="true">💼</span>Jobs
+      </button>
+      <button type="button" data-tab-btn="resume" aria-selected="false">
+        <span class="ico" aria-hidden="true">📄</span>Resume
       </button>
       <button type="button" data-tab-btn="diary" aria-selected="false">
-        <span class="ico" aria-hidden="true">D</span>Diary
+        <span class="ico" aria-hidden="true">📝</span>Journal
       </button>
       <button type="button" data-tab-btn="more" aria-selected="false">
         <span class="ico" aria-hidden="true">⋯</span>More
       </button>
     </nav>
+  </div>
+
+  <!-- Persistent resume peek drawer (keeps place on current screen) -->
+  <div class="resume-drawer-backdrop" id="resumeDrawer" hidden>
+    <div class="resume-drawer" role="dialog" aria-modal="true" aria-labelledby="resumeDrawerTitle">
+      <div class="resume-drawer-head">
+        <h2 id="resumeDrawerTitle">Resume</h2>
+        <div class="btn-row" style="margin:0;">
+          <button type="button" class="small" id="btnDrawerOpenResume">Full resume</button>
+          <button type="button" class="small ghost" id="btnCloseResumeDrawer" aria-label="Close">Close</button>
+        </div>
+      </div>
+      <div class="resume-drawer-body" id="resumeDrawerBody"></div>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="jobModal" hidden>
@@ -476,6 +597,7 @@
         <textarea id="j-notes" rows="3" maxlength="400"></textarea>
 
         <div class="btn-row">
+          <button type="button" class="ghost small" id="btnJobResumePeek">Peek resume</button>
           <button type="submit" class="primary">Save</button>
           <button type="button" class="ghost" id="btnCancelJob">Cancel</button>
           <button type="button" class="danger" id="btnDeleteJob" hidden>Delete</button>

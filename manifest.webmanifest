@@ -1,13 +1,13 @@
 {
   "name": "Riley Job Hub",
   "short_name": "Job Hub",
-  "description": "Mobile job search hub for Riley LaMar - profile, resume, applications.",
+  "description": "Mobile job search hub for Riley LaMar - resume-first job search: applications, journal, letters.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0b1220",
-  "theme_color": "#166534",
+  "background_color": "#0c2f1c",
+  "theme_color": "#0c2f1c",
   "icons": [
     {
       "src": "icons/icon-192.png",

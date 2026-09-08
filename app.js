@@ -36,7 +36,7 @@
   var jobsView = "edit";
   var calendarView = "edit";
   var diaryView = "edit";
-  var activeTab = "board";
+  var activeTab = "home";
   var pinBuffer = "";
   var calCursor = null; // {y,m}
   var selectedCalDate = null;
@@ -92,9 +92,19 @@
     if (local.applications) out.applications = local.applications;
     if (local.calendarEvents) out.calendarEvents = local.calendarEvents;
     if (local.diary) out.diary = local.diary;
+    if (local.aspirations) out.aspirations = local.aspirations;
+    if (local.letterDrafts) out.letterDrafts = local.letterDrafts;
+    if (local.currentLetter) out.currentLetter = local.currentLetter;
     if (!out.calendarEvents) out.calendarEvents = [];
     if (!out.diary) {
       out.diary = server.diary || { interests: "", patterns: "", desires: "", entries: [] };
+    }
+    if (!out.aspirations) {
+      out.aspirations = server.aspirations || { entries: [] };
+    }
+    if (!out.letterDrafts) out.letterDrafts = server.letterDrafts || [];
+    if (!out.currentLetter) {
+      out.currentLetter = server.currentLetter || { to: "", subject: "", body: "" };
     }
     out.version = Math.max(local.version || 1, server.version || 1);
     return out;
@@ -118,23 +128,47 @@
     });
   }
 
+  function navHighlightFor(name) {
+    if (name === "jobs" || name === "calendar") return "board";
+    if (name === "aspirations" || name === "letter" || name === "profile") return "more";
+    return name;
+  }
+
   function switchTab(name) {
     activeTab = name;
     document.querySelectorAll(".tab-panel").forEach(function (p) {
       p.hidden = p.getAttribute("data-tab") !== name;
     });
+    var navName = navHighlightFor(name);
     document.querySelectorAll("[data-tab-btn]").forEach(function (b) {
-      var on = b.getAttribute("data-tab-btn") === name;
+      var on = b.getAttribute("data-tab-btn") === navName || b.getAttribute("data-tab-btn") === name;
+      // Prefer exact match for home/resume/diary; jobs-list maps to board nav
+      if (name === "jobs" || name === "calendar" || name === "aspirations" || name === "letter" || name === "profile") {
+        on = b.getAttribute("data-tab-btn") === navName;
+      } else {
+        on = b.getAttribute("data-tab-btn") === name;
+      }
       b.classList.toggle("active", on);
       b.setAttribute("aria-selected", on ? "true" : "false");
     });
     document.querySelectorAll("#orgPath [data-path]").forEach(function (s) {
-      s.classList.toggle("on", s.getAttribute("data-path") === name);
+      var path = s.getAttribute("data-path");
+      var on = path === name || (path === "board" && (name === "jobs" || name === "calendar")) ||
+        (path === "more" && (name === "aspirations" || name === "letter" || name === "profile"));
+      s.classList.toggle("on", on);
     });
-    if (name === "board") renderCorkBoard();
+    if (name === "home") renderHome();
+    if (name === "board") renderJobBoard();
     if (name === "calendar") renderCalendar();
     if (name === "diary") renderDiary();
+    if (name === "aspirations") renderAspirations();
+    if (name === "letter") renderLetter();
+    if (name === "resume") {
+      renderResumeMeta();
+      renderExperience();
+    }
     refreshActivePaper();
+    window.scrollTo(0, 0);
   }
 
   function formatDateRange(job) {
@@ -385,6 +419,7 @@
     if (lock) lock.hidden = true;
     if (shell) shell.hidden = false;
     pinBuffer = "";
+    activeTab = "home";
     renderAll();
   }
   function lockApp() {
@@ -492,9 +527,9 @@
     return { text: left + "d left", cls: "" };
   }
 
-  /* ---------- Cork board ---------- */
-  function renderCorkBoard() {
-    var board = $("corkBoard");
+  /* ---------- Jobs board ---------- */
+  function renderJobBoard() {
+    var board = $("jobBoard");
     if (!board || !state) return;
     autoArchiveApplications();
     var apps = activeApps().slice().sort(function (a, b) {
@@ -531,7 +566,7 @@
     }).join("");
   }
 
-  /* ---------- Diary ---------- */
+  /* ---------- Journal (persisted as state.diary) ---------- */
   function ensureDiary() {
     if (!state.diary) {
       state.diary = { interests: "", patterns: "", desires: "", entries: [] };
@@ -712,8 +747,8 @@
       blocks.push({
         id: "diary-header",
         html:
-          '<h1 class="paper-name">' + escapeHtml(p.name || "Diary") + "</h1>" +
-          '<p class="paper-doc-title" style="margin-top:0.85em;">Day notes · Applications · Catalogue</p>'
+          '<h1 class="paper-name">' + escapeHtml(p.name || "Journal") + "</h1>" +
+          '<p class="paper-doc-title" style="margin-top:0.85em;">Journal · Applications · Catalogue</p>'
       });
 
       var importantEntries = (d.entries || []).filter(function (e) { return e.important; });
@@ -774,6 +809,357 @@
       });
       return blocks;
     });
+  }
+
+
+  /* ---------- Home ---------- */
+  function renderHome() {
+    if (!state) return;
+    var r = state.resume || {};
+    var target = $("homeTarget");
+    if (target) {
+      target.textContent = r.targetRole
+        ? ("Target: " + r.targetRole)
+        : "Set a target role on your resume";
+    }
+    var chips = $("homeSkillChips");
+    if (chips) {
+      var strengths = (r.strengths || []).slice(0, 8);
+      if (!strengths.length && r.skills) {
+        strengths = String(r.skills).split(/[,\n]/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
+      }
+      chips.innerHTML = strengths.length
+        ? strengths.map(function (s) {
+            return '<span class="chip on">' + escapeHtml(s) + "</span>";
+          }).join("")
+        : '<span style="color:var(--muted);font-size:.88rem;">Add strengths on Resume</span>';
+    }
+  }
+
+  /* ---------- Resume drawer (persistent peek) ---------- */
+  function openResumeDrawer(opts) {
+    opts = opts || {};
+    var drawer = $("resumeDrawer");
+    if (!drawer || !state) return;
+    renderResumeDrawer(!!opts.insertable);
+    drawer.hidden = false;
+  }
+
+  function closeResumeDrawer() {
+    var drawer = $("resumeDrawer");
+    if (drawer) drawer.hidden = true;
+  }
+
+  function renderResumeDrawer(insertable) {
+    var body = $("resumeDrawerBody");
+    if (!body || !state) return;
+    var r = state.resume || {};
+    var p = state.profile || {};
+    var html = "";
+    html += '<p class="rd-target">' + escapeHtml(r.targetRole || p.name || "Resume") + "</p>";
+    if (r.summary) html += '<p class="rd-summary">' + escapeHtml(r.summary) + "</p>";
+
+    var strengths = r.strengths || [];
+    if (strengths.length) {
+      html += '<div class="rd-section"><h3>Skills / strengths</h3><div class="chips">';
+      strengths.forEach(function (s) {
+        if (insertable) {
+          html += '<button type="button" class="chip on" data-insert-text="' + escapeAttr(s) + '">' + escapeHtml(s) + "</button>";
+        } else {
+          html += '<span class="chip on">' + escapeHtml(s) + "</span>";
+        }
+      });
+      html += "</div></div>";
+    }
+
+    var jobs = r.jobs || [];
+    if (jobs.length) {
+      html += '<div class="rd-section"><h3>Experience</h3>';
+      jobs.slice(0, 4).forEach(function (job) {
+        html += "<p class=\"rd-bullet\"><strong>" + escapeHtml(job.title || "") + "</strong> — " +
+          escapeHtml(job.employer || "") + "</p>";
+        (job.bullets || []).slice(0, 3).forEach(function (b) {
+          if (!b) return;
+          if (insertable) {
+            html += '<button type="button" class="rd-insert" data-insert-text="' + escapeAttr(b) + '">+ ' +
+              escapeHtml(b.length > 90 ? b.slice(0, 87) + "…" : b) + "</button>";
+          } else {
+            html += '<p class="rd-bullet">• ' + escapeHtml(b) + "</p>";
+          }
+        });
+      });
+      html += "</div>";
+    }
+
+    if (insertable) {
+      if (r.targetRole) {
+        html = '<div class="rd-section"><h3>Quick insert</h3>' +
+          '<button type="button" class="rd-insert" data-insert-text="' + escapeAttr(r.targetRole) + '">Target: ' +
+          escapeHtml(r.targetRole) + "</button></div>" + html;
+      }
+      html = '<p style="margin:0 0 10px;color:var(--muted);font-size:.85rem;">Tap a chip or bullet to insert into your letter without leaving this screen.</p>' + html;
+    }
+
+    body.innerHTML = html || '<p class="empty">Add resume content to peek here.</p>';
+  }
+
+  function insertIntoLetter(text) {
+    var ta = $("l-body");
+    if (!ta || !text) return;
+    var start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+    var end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
+    var before = ta.value.slice(0, start);
+    var after = ta.value.slice(end);
+    var padBefore = before && !/\s$/.test(before) ? "\n" : "";
+    var padAfter = after && !/^\s/.test(after) ? "\n" : "";
+    ta.value = before + padBefore + text + padAfter + after;
+    persistCurrentLetter();
+    toast("Inserted into letter");
+  }
+
+  /* ---------- Aspirations ---------- */
+  function ensureAspirations() {
+    if (!state.aspirations) state.aspirations = { entries: [] };
+    if (!state.aspirations.entries) state.aspirations.entries = [];
+  }
+
+  function renderAspirations() {
+    if (!state) return;
+    ensureAspirations();
+    if ($("a-freewrite")) $("a-freewrite").value = "";
+    var list = $("aspirationsList");
+    if (!list) return;
+    var entries = (state.aspirations.entries || []).slice();
+    if (!entries.length) {
+      list.innerHTML = '<p style="margin:0;color:var(--muted);font-size:.88rem;">Nothing saved yet — write what’s on your mind above.</p>';
+      return;
+    }
+    list.innerHTML = entries.map(function (e) {
+      return (
+        '<div class="diary-card" data-asp-id="' + escapeAttr(e.id) + '">' +
+          '<div class="meta">' + escapeHtml(e.date || "") + "</div>" +
+          '<div class="body">' + escapeHtml(e.body || "") + "</div>" +
+          '<div class="btn-row">' +
+            '<button type="button" class="small danger" data-del-asp="' + escapeAttr(e.id) + '">Delete</button>' +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  function saveAspiration() {
+    ensureAspirations();
+    var body = ($("a-freewrite") && $("a-freewrite").value.trim()) || "";
+    if (!body) {
+      toast("Write something first");
+      return;
+    }
+    state.aspirations.entries.unshift({
+      id: uid("asp"),
+      date: toLocalISODate(),
+      body: body
+    });
+    saveLocal();
+    if ($("a-freewrite")) $("a-freewrite").value = "";
+    renderAspirations();
+    toast("Aspiration saved");
+  }
+
+  /* ---------- Draft Letter ---------- */
+  var LETTER_TEMPLATES = {
+    cover: {
+      subject: "Application for [Role] — Riley LaMar",
+      body: "Dear Hiring Manager,\n\nI am writing to express my interest in the [Role] position at [Company]. With a strong background in hospitality leadership, cash handling, and guest experience, I am excited to bring reliability and energy to your team.\n\n[Insert a strength or experience bullet from Resume]\n\nThank you for your time and consideration. I look forward to the opportunity to discuss how I can contribute.\n\nSincerely,\nRiley LaMar"
+    },
+    thankyou: {
+      subject: "Thank you — [Role] conversation",
+      body: "Dear [Name],\n\nThank you for taking the time to speak with me about the [Role] role at [Company]. I enjoyed learning more about the team and am even more interested in contributing.\n\n[Optional: one resume highlight]\n\nPlease let me know if I can share anything else. I appreciate your consideration.\n\nBest regards,\nRiley LaMar"
+    },
+    followup: {
+      subject: "Following up — [Role] application",
+      body: "Dear Hiring Manager,\n\nI am following up on my application for the [Role] position at [Company]. I remain very interested and would welcome the chance to talk further.\n\nPlease let me know if there is any additional information I can provide.\n\nThank you,\nRiley LaMar"
+    }
+  };
+
+  function ensureLetter() {
+    if (!state.currentLetter) state.currentLetter = { to: "", subject: "", body: "" };
+    if (!state.letterDrafts) state.letterDrafts = [];
+  }
+
+  function persistCurrentLetter() {
+    ensureLetter();
+    state.currentLetter = {
+      to: ($("l-to") && $("l-to").value) || "",
+      subject: ($("l-subject") && $("l-subject").value) || "",
+      body: ($("l-body") && $("l-body").value) || ""
+    };
+    saveLocal();
+  }
+
+  function renderLetterInsertChips() {
+    var wrap = $("letterInsertChips");
+    if (!wrap || !state) return;
+    var r = state.resume || {};
+    var chips = [];
+    if (r.targetRole) chips.push({ label: "Target", text: r.targetRole });
+    (r.strengths || []).slice(0, 6).forEach(function (s) {
+      chips.push({ label: s, text: s });
+    });
+    (r.jobs || []).slice(0, 2).forEach(function (job) {
+      (job.bullets || []).slice(0, 2).forEach(function (b) {
+        if (b) chips.push({
+          label: (b.length > 28 ? b.slice(0, 25) + "…" : b),
+          text: b
+        });
+      });
+    });
+    if (!chips.length) {
+      wrap.innerHTML = '<span style="color:var(--muted);font-size:.85rem;">Add resume skills/experience to insert here</span>';
+      return;
+    }
+    wrap.innerHTML = chips.map(function (c) {
+      return '<button type="button" class="chip" data-insert-text="' + escapeAttr(c.text) + '">' +
+        escapeHtml(c.label) + "</button>";
+    }).join("");
+  }
+
+  function renderLetter() {
+    if (!state) return;
+    ensureLetter();
+    var cur = state.currentLetter || {};
+    if ($("l-to")) $("l-to").value = cur.to || "";
+    if ($("l-subject")) $("l-subject").value = cur.subject || "";
+    if ($("l-body")) $("l-body").value = cur.body || "";
+    renderLetterInsertChips();
+    renderLetterDraftsList();
+  }
+
+  function renderLetterDraftsList() {
+    var list = $("letterDraftsList");
+    if (!list) return;
+    ensureLetter();
+    var drafts = state.letterDrafts || [];
+    if (!drafts.length) {
+      list.innerHTML = '<p style="margin:0;color:var(--muted);font-size:.88rem;">No saved drafts yet.</p>';
+      return;
+    }
+    list.innerHTML = drafts.map(function (d) {
+      return (
+        '<button type="button" class="stream-item" data-load-draft="' + escapeAttr(d.id) + '">' +
+          '<div><div class="si-main">' + escapeHtml(d.subject || "(No subject)") + "</div>" +
+          '<div class="si-sub">' + escapeHtml(d.to || "No recipient") +
+          (d.updatedAt ? " · " + escapeHtml(d.updatedAt) : "") + "</div></div>" +
+        "</button>"
+      );
+    }).join("");
+  }
+
+  function applyLetterTemplate(key) {
+    var tpl = LETTER_TEMPLATES[key];
+    if (!tpl) return;
+    var r = (state && state.resume) || {};
+    var role = r.targetRole || "[Role]";
+    var subject = tpl.subject.replace(/\[Role\]/g, role);
+    var body = tpl.body.replace(/\[Role\]/g, role);
+    if ($("l-subject")) $("l-subject").value = subject;
+    if ($("l-body")) $("l-body").value = body;
+    document.querySelectorAll("[data-letter-tpl]").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-letter-tpl") === key);
+    });
+    persistCurrentLetter();
+    toast("Template applied");
+  }
+
+  function buildGmailUrl() {
+    var to = ($("l-to") && $("l-to").value.trim()) || "";
+    var su = ($("l-subject") && $("l-subject").value) || "";
+    var body = ($("l-body") && $("l-body").value) || "";
+    return "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) +
+      "&su=" + encodeURIComponent(su) + "&body=" + encodeURIComponent(body);
+  }
+
+  function buildMailtoUrl() {
+    var to = ($("l-to") && $("l-to").value.trim()) || "";
+    var su = ($("l-subject") && $("l-subject").value) || "";
+    var body = ($("l-body") && $("l-body").value) || "";
+    return "mailto:" + encodeURIComponent(to) +
+      "?subject=" + encodeURIComponent(su) + "&body=" + encodeURIComponent(body);
+  }
+
+  function openGmail() {
+    persistCurrentLetter();
+    var url = buildGmailUrl();
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast("Opening Gmail");
+  }
+
+  function openMailto() {
+    persistCurrentLetter();
+    window.location.href = buildMailtoUrl();
+  }
+
+  function copyLetter() {
+    persistCurrentLetter();
+    var to = ($("l-to") && $("l-to").value) || "";
+    var su = ($("l-subject") && $("l-subject").value) || "";
+    var body = ($("l-body") && $("l-body").value) || "";
+    var text = "To: " + to + "\nSubject: " + su + "\n\n" + body;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast("Copied");
+      }).catch(function () {
+        toast("Copy failed");
+      });
+    } else {
+      toast("Clipboard unavailable");
+    }
+  }
+
+  function downloadLetter() {
+    persistCurrentLetter();
+    var to = ($("l-to") && $("l-to").value) || "";
+    var su = ($("l-subject") && $("l-subject").value) || "";
+    var body = ($("l-body") && $("l-body").value) || "";
+    var text = "To: " + to + "\nSubject: " + su + "\n\n" + body;
+    var blob = new Blob([text], { type: "text/plain" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "letter-draft.txt";
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast("Downloaded .txt");
+  }
+
+  function saveLetterDraft() {
+    ensureLetter();
+    persistCurrentLetter();
+    var cur = state.currentLetter;
+    if (!(cur.subject || cur.body || cur.to)) {
+      toast("Nothing to save");
+      return;
+    }
+    var draft = {
+      id: uid("letter"),
+      to: cur.to || "",
+      subject: cur.subject || "",
+      body: cur.body || "",
+      updatedAt: toLocalISODate()
+    };
+    state.letterDrafts.unshift(draft);
+    state.letterDrafts = state.letterDrafts.slice(0, 20);
+    saveLocal();
+    renderLetterDraftsList();
+    toast("Draft saved");
+  }
+
+  function loadLetterDraft(id) {
+    ensureLetter();
+    var d = (state.letterDrafts || []).find(function (x) { return x.id === id; });
+    if (!d) return;
+    state.currentLetter = { to: d.to || "", subject: d.subject || "", body: d.body || "" };
+    saveLocal();
+    renderLetter();
+    toast("Draft loaded");
   }
 
   /* ---------- Profile ---------- */
@@ -1653,7 +2039,7 @@
     closeJobModal();
     renderJobs();
     renderCalendar();
-    renderCorkBoard();
+    renderJobBoard();
     renderAllPapers();
     toast("Application saved");
   }
@@ -1666,7 +2052,7 @@
     closeJobModal();
     renderJobs();
     renderCalendar();
-    renderCorkBoard();
+    renderJobBoard();
     renderAllPapers();
     toast("Application deleted");
   }
@@ -1733,18 +2119,23 @@
     var lock = $("pinLock");
     if (lock) lock.hidden = true;
     autoArchiveApplications();
+    ensureAspirations();
+    ensureLetter();
     renderProfile();
     renderResumeMeta();
     renderExperience();
     renderJobs();
-    renderCorkBoard();
+    renderJobBoard();
     renderDiary();
+    renderHome();
+    renderAspirations();
+    renderLetter();
     setProfileView(profileView);
     setResumeView(resumeView);
     setJobsView(jobsView);
     setCalendarView(calendarView);
     setDiaryView(diaryView);
-    switchTab(activeTab || "board");
+    switchTab(activeTab || "home");
   }
 
   function printActivePaper() {
@@ -1765,8 +2156,79 @@
       });
     }
     if ($("btnLockApp")) $("btnLockApp").addEventListener("click", lockApp);
-    if ($("corkBoard")) {
-      $("corkBoard").addEventListener("click", function (e) {
+
+    function peekResume(insertable) {
+      openResumeDrawer({ insertable: !!insertable || activeTab === "letter" });
+    }
+    if ($("btnResumePeek")) $("btnResumePeek").addEventListener("click", function () { peekResume(activeTab === "letter"); });
+    if ($("btnBoardResumePeek")) $("btnBoardResumePeek").addEventListener("click", function () { peekResume(false); });
+    if ($("btnLetterResumePeek")) $("btnLetterResumePeek").addEventListener("click", function () { peekResume(true); });
+    if ($("btnAspirationsResumePeek")) $("btnAspirationsResumePeek").addEventListener("click", function () { peekResume(false); });
+    if ($("btnJobResumePeek")) $("btnJobResumePeek").addEventListener("click", function () { peekResume(false); });
+    if ($("btnCloseResumeDrawer")) $("btnCloseResumeDrawer").addEventListener("click", closeResumeDrawer);
+    if ($("btnDrawerOpenResume")) {
+      $("btnDrawerOpenResume").addEventListener("click", function () {
+        closeResumeDrawer();
+        switchTab("resume");
+      });
+    }
+    if ($("resumeDrawer")) {
+      $("resumeDrawer").addEventListener("click", function (e) {
+        if (e.target === $("resumeDrawer")) closeResumeDrawer();
+        var ins = e.target.closest("[data-insert-text]");
+        if (ins) {
+          insertIntoLetter(ins.getAttribute("data-insert-text"));
+          if (activeTab !== "letter") switchTab("letter");
+        }
+      });
+    }
+
+    if ($("btnSaveAspiration")) $("btnSaveAspiration").addEventListener("click", saveAspiration);
+    if ($("aspirationsList")) {
+      $("aspirationsList").addEventListener("click", function (e) {
+        var del = e.target.closest("[data-del-asp]");
+        if (!del) return;
+        var id = del.getAttribute("data-del-asp");
+        if (!confirm("Delete this aspiration?")) return;
+        ensureAspirations();
+        state.aspirations.entries = state.aspirations.entries.filter(function (x) { return x.id !== id; });
+        saveLocal();
+        renderAspirations();
+        toast("Deleted");
+      });
+    }
+
+    document.querySelectorAll("[data-letter-tpl]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        applyLetterTemplate(btn.getAttribute("data-letter-tpl"));
+      });
+    });
+    if ($("btnOpenGmail")) $("btnOpenGmail").addEventListener("click", openGmail);
+    if ($("btnMailto")) $("btnMailto").addEventListener("click", openMailto);
+    if ($("btnCopyLetter")) $("btnCopyLetter").addEventListener("click", copyLetter);
+    if ($("btnDownloadLetter")) $("btnDownloadLetter").addEventListener("click", downloadLetter);
+    if ($("btnSaveLetterDraft")) $("btnSaveLetterDraft").addEventListener("click", saveLetterDraft);
+    ["l-to", "l-subject", "l-body"].forEach(function (id) {
+      if ($(id)) $(id).addEventListener("change", persistCurrentLetter);
+      if ($(id)) $(id).addEventListener("blur", persistCurrentLetter);
+    });
+    if ($("letterInsertChips")) {
+      $("letterInsertChips").addEventListener("click", function (e) {
+        var chip = e.target.closest("[data-insert-text]");
+        if (!chip) return;
+        insertIntoLetter(chip.getAttribute("data-insert-text"));
+      });
+    }
+    if ($("letterDraftsList")) {
+      $("letterDraftsList").addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-load-draft]");
+        if (!btn) return;
+        loadLetterDraft(btn.getAttribute("data-load-draft"));
+      });
+    }
+
+    if ($("jobBoard")) {
+      $("jobBoard").addEventListener("click", function (e) {
         if (e.target.closest("#emptyBoardAdd")) {
           openJobModal(null);
           return;
@@ -2076,6 +2538,7 @@
     });
 
     $("jobFilter").addEventListener("change", renderJobs);
+    if ($("jobBoardFilter")) $("jobBoardFilter").addEventListener("change", renderJobs);
     $("btnAddJob").addEventListener("click", function () { openJobModal(null); });
     $("jobList").addEventListener("click", function (e) {
       var edit = e.target.closest("[data-edit-job]");
