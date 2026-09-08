@@ -31,7 +31,8 @@ Open `http://localhost:8765/` in a browser. Service workers need a secure contex
 - **Resume** - accordion experience cards with month/year selects, role type, bullet list Add/Remove, strength chips, target role select
 - **Jobs** - applications with status badges, filter, add/edit modal, newest first
 - **Export / Import JSON** - backup or restore all app data
-- Offline shell via service worker; seed JSON prefers network so server updates apply
+- Offline shell via service worker; seed JSON and assistant inbox prefer network so server updates apply
+- Email Job Search handoff + From Job Search Apply-to-app inbox
 
 ## Data merge rules
 
@@ -41,10 +42,10 @@ Open `http://localhost:8765/` in a browser. Service workers need a secure contex
 
 ## How Grok Bot updates the live site
 
-1. Edit seed data in `data/app-state.json` (profile, resume jobs, applications).
-2. Optionally bump the cache name in `sw.js` (e.g. `riley-job-hub-v2`) if you also changed shell assets and need clients to drop old caches.
+1. Edit seed data in `data/app-state.json` (profile, resume jobs, applications) and/or append replies in `data/assistant-inbox.json`.
+2. Optionally bump the cache name in `sw.js` (e.g. `riley-job-hub-v15`) if you also changed shell assets and need clients to drop old caches.
 3. Redeploy / sync the `/workspace/riley-job-hub/` folder to the hosting target.
-4. On the phone app: open **Profile** -> **Reset from server data** to pull the new JSON (or clear site data / reinstall the home screen icon for a clean slate).
+4. On the phone app: open **Profile** -> **Reset from server data** for app-state; for inbox replies tap **From Job Search -> Refresh** (network-first, no full reset needed).
 5. Hard-refresh Safari if testing in the browser tab so the updated service worker installs.
 
 ## Files
@@ -58,16 +59,18 @@ Open `http://localhost:8765/` in a browser. Service workers need a secure contex
 | `manifest.webmanifest` | PWA manifest |
 | `icons/` | 192 / 512 / apple-touch icons |
 | `data/app-state.json` | Server seed data |
+| `data/assistant-inbox.json` | Rileys Job Search reply inbox (network-first) |
 
 ## ASCII-only source
 
 All source files use ASCII characters only (no fancy punctuation in code).
 
-## IA (v14)
+## IA (v15)
 
 - Home hub after PIN unlock
 - Resume is persistent (bottom nav + topbar peek drawer + insert into letters)
 - Journal (renamed from Diary), Aspirations, Draft Letter (Gmail)
 - Theme tokens centralized in `:root` CSS variables
-- Job Search: resume-aware live board links + Ask assistant handoff packet
-- Bottom nav: Home | Jobs | Resume | Search | More (Journal under More)
+- Job Search: resume-aware live board links + **Email Job Search** (Gmail compose to `Hoppb6@gmail.com`, subject `JOB HUB SEARCH ASK`) with Copy/Share secondary
+- **From Job Search** inbox (`data/assistant-inbox.json`): Refresh (network-first), unread badge, Apply merges applications/searches/letter/aspiration/journal; Paste reply fallback
+- Bottom nav: Home | Jobs | Resume | Search | More (Journal + inbox under More)

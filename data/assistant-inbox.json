@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-08T21:50:00.000Z",
+  "messages": [
+    {
+      "id": "msg_welcome_001",
+      "from": "Rileys Job Search",
+      "createdAt": "2026-09-08T21:50:00.000Z",
+      "subject": "Welcome - how email back-and-forth works",
+      "body": "Hi Riley - this is your From Job Search inbox.\n\n1) On Job Search, tap Email Job Search. That opens Gmail to Brandon (Hoppb6@gmail.com) with subject JOB HUB SEARCH ASK and a packet about your query, resume target, skills, location, and live board links.\n\n2) Brandon / Rileys Job Search replies by updating this file on the site (or you can Paste reply if fetch fails).\n\n3) Tap Refresh, open a message, then Apply to app (or Apply & mark read). Apply merges suggested applications, searches, letter drafts, aspirations, and journal notes into your local hub - no fake jobs are seeded here.\n\nResume peek stays available anytime from the orange pill.",
+      "actions": {
+        "applications": [],
+        "searches": [],
+        "letterDraft": null,
+        "aspiration": "",
+        "journalNote": null
+      }
+    }
+  ]
+}

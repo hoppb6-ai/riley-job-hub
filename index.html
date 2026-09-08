@@ -108,6 +108,17 @@
             <span>Cover · thank you · follow-up</span>
           </button>
         </div>
+        <div class="card home-email-card">
+          <div class="section-title">
+            <h2>Email Job Search</h2>
+            <span class="inbox-badge" id="homeInboxBadge" hidden>0</span>
+          </div>
+          <p class="ask-search-lead">Emails Brandon&apos;s Gmail for Rileys Job Search. Replies show under From Job Search.</p>
+          <div class="btn-row">
+            <button type="button" class="primary" id="btnHomeEmailJobSearch">Email Job Search</button>
+            <button type="button" class="small" data-jump="search">Open Search</button>
+          </div>
+        </div>
         <div class="card home-resume-strip" id="homeResumeStrip">
           <div class="section-title">
             <h2>Resume at a glance</h2>
@@ -528,17 +539,32 @@
         </div>
 
         <div class="card ask-search-card">
-          <div class="section-title"><h2>Ask Job Search assistant</h2></div>
-          <p class="ask-search-lead">This PWA cannot call Grok Bot directly. Build a packet you can paste into Brandon&apos;s Rileys Job Search chat.</p>
-          <button type="button" class="primary" id="btnAskJobSearch">Ask Job Search assistant</button>
+          <div class="section-title"><h2>Email Job Search</h2></div>
+          <p class="ask-search-lead">Emails Brandon&apos;s Gmail for Rileys Job Search (<code>Hoppb6@gmail.com</code>). Subject stays <strong>JOB HUB SEARCH ASK</strong>. Replies appear below under From Job Search.</p>
+          <button type="button" class="primary" id="btnEmailJobSearch">Email Job Search</button>
+          <div class="btn-row" style="margin-top:10px;">
+            <button type="button" class="small" id="btnAskJobSearch">Preview packet</button>
+            <button type="button" class="small" id="btnCopyAskPacket">Copy</button>
+            <button type="button" class="small" id="btnShareAskPacket">Share</button>
+            <button type="button" class="ghost small" id="btnSearchResumePeek2">Peek resume</button>
+          </div>
           <div id="askPacketBox" class="ask-packet-box" hidden>
             <pre class="ask-packet-pre" id="askPacketPreview"></pre>
-            <div class="btn-row">
-              <button type="button" class="primary small" id="btnCopyAskPacket">Copy ask</button>
-              <button type="button" class="small" id="btnShareAskPacket">Share</button>
-              <button type="button" class="small" id="btnEmailAskPacket">Email ask</button>
-            </div>
           </div>
+        </div>
+
+        <div class="card inbox-card" id="fromJobSearchCard">
+          <div class="section-title">
+            <h2>From Job Search</h2>
+            <span class="inbox-badge" id="searchInboxBadge" hidden>0</span>
+          </div>
+          <p class="ask-search-lead">Replies from Rileys Job Search. Refresh pulls the latest inbox from the site.</p>
+          <div class="btn-row">
+            <button type="button" class="primary small" id="btnRefreshInbox">Refresh</button>
+            <button type="button" class="small" id="btnPasteInboxReply">Paste reply</button>
+          </div>
+          <p class="inbox-status" id="inboxStatusLine"></p>
+          <div class="stream-list" id="assistantInboxList"></div>
         </div>
       </section>
 
@@ -556,6 +582,20 @@
             <button type="button" class="path-step" data-jump="letter"><strong>Draft Letter</strong><span>Gmail-ready</span></button>
             <button type="button" class="path-step" data-jump="home"><strong>Home</strong><span>Hub</span></button>
           </div>
+        </div>
+        <div class="card inbox-card" id="fromJobSearchCardMore">
+          <div class="section-title">
+            <h2>From Job Search</h2>
+            <span class="inbox-badge" id="moreInboxBadge" hidden>0</span>
+          </div>
+          <p class="ask-search-lead">Same inbox as on Job Search — apply replies into jobs, searches, letters, aspirations, and journal.</p>
+          <div class="btn-row">
+            <button type="button" class="primary small" id="btnRefreshInboxMore">Refresh</button>
+            <button type="button" class="small" id="btnPasteInboxReplyMore">Paste reply</button>
+            <button type="button" class="small" data-jump="search">Job Search</button>
+          </div>
+          <p class="inbox-status" id="inboxStatusLineMore"></p>
+          <div class="stream-list" id="assistantInboxListMore"></div>
         </div>
         <div class="card">
           <h2>Lock</h2>
@@ -583,6 +623,39 @@
         <span class="ico" aria-hidden="true">⋯</span>More
       </button>
     </nav>
+  </div>
+
+  <!-- Assistant inbox detail -->
+  <div class="modal-backdrop" id="inboxModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inboxModalTitle">
+      <div class="section-title">
+        <h2 id="inboxModalTitle">From Job Search</h2>
+        <button type="button" class="ghost small" id="btnCloseInboxModal" aria-label="Close">Close</button>
+      </div>
+      <p class="inbox-msg-meta" id="inboxMsgMeta"></p>
+      <pre class="ask-packet-pre inbox-msg-body" id="inboxMsgBody"></pre>
+      <div class="inbox-actions-preview" id="inboxActionsPreview"></div>
+      <div class="btn-row">
+        <button type="button" class="primary" id="btnApplyInboxMsg">Apply to app</button>
+        <button type="button" class="primary" id="btnApplyInboxMsgRead">Apply &amp; mark read</button>
+        <button type="button" class="small" id="btnMarkInboxRead">Mark read</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paste assistant reply -->
+  <div class="modal-backdrop" id="pasteInboxModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pasteInboxTitle">
+      <div class="section-title">
+        <h2 id="pasteInboxTitle">Paste reply</h2>
+        <button type="button" class="ghost small" id="btnClosePasteInbox" aria-label="Close">Close</button>
+      </div>
+      <p class="ask-search-lead">Paste a single message JSON object or a full <code>assistant-inbox.json</code> snippet.</p>
+      <textarea id="pasteInboxText" rows="12" placeholder="{ message or full inbox JSON }"></textarea>
+      <div class="btn-row" style="margin-top:10px;">
+        <button type="button" class="primary" id="btnPasteInboxApply">Load paste</button>
+      </div>
+    </div>
   </div>
 
   <!-- Persistent resume peek drawer (keeps place on current screen) -->

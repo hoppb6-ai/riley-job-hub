@@ -1,4 +1,4 @@
-const CACHE = "riley-job-hub-v14";
+const CACHE = "riley-job-hub-v15";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./data/app-state.json",
+  "./data/assistant-inbox.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
@@ -42,8 +43,9 @@ self.addEventListener("fetch", function (event) {
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Prefer network for seed JSON so "Reset from server" and updates work
-  if (url.pathname.indexOf("/data/app-state.json") !== -1) {
+  // Prefer network for seed JSON and assistant inbox so updates are not stuck offline-stale
+  if (url.pathname.indexOf("/data/app-state.json") !== -1 ||
+      url.pathname.indexOf("/data/assistant-inbox.json") !== -1) {
     event.respondWith(
       fetch(req).then(function (res) {
         var copy = res.clone();

@@ -160,11 +160,12 @@
         (path === "search" && name === "search");
       s.classList.toggle("on", on);
     });
-    if (name === "home") renderHome();
+    if (name === "home") { renderHome(); updateInboxBadges(); }
     if (name === "board") renderJobBoard();
     if (name === "calendar") renderCalendar();
     if (name === "diary") renderDiary();
     if (name === "search") renderJobSearch();
+    if (name === "more") renderAssistantInboxLists();
     if (name === "aspirations") renderAspirations();
     if (name === "letter") renderLetter();
     if (name === "resume") {
@@ -843,9 +844,13 @@
 
   /* ---------- Job Search ---------- */
   var FALLBACK_ASK_EMAIL = "Hoppb6@gmail.com";
+  var ASK_EMAIL_TO = "Hoppb6@gmail.com";
   var MAX_RECENT_SEARCHES = 8;
+  var INBOX_SEEN_KEY = "riley-job-hub-inbox-seen";
   var searchPrefillDone = false;
   var lastAskPacket = "";
+  var assistantInbox = { version: 1, updatedAt: "", messages: [] };
+  var viewingInboxMsgId = null;
 
   function ensureRecentSearches() {
     if (!state.recentSearches || !Array.isArray(state.recentSearches)) {
@@ -1011,6 +1016,7 @@
     renderSearchSuggestChips();
     renderLiveSearchLinks();
     renderRecentSearches();
+    renderAssistantInboxLists();
   }
 
   function applySearchChip(kind, value) {
@@ -1062,6 +1068,8 @@
     }
     lines.push("");
     lines.push("Please help refine this job search and suggest next steps.");
+    lines.push("");
+    lines.push("Note: When you reply, Riley will see it under From Job Search in the app (assistant-inbox.json). Use Apply to merge jobs/searches/letters into the hub.");
     return lines.join("\n");
   }
 
@@ -1106,15 +1114,427 @@
     }
   }
 
-  function emailAskPacket() {
-    if (!lastAskPacket) lastAskPacket = buildAskPacket();
-    var profileEmail = (state.profile && state.profile.email) || "";
-    var to = String(profileEmail).trim() || FALLBACK_ASK_EMAIL;
+  function buildAskGmailUrl(body) {
+    var to = ASK_EMAIL_TO || FALLBACK_ASK_EMAIL;
     var subject = "JOB HUB SEARCH ASK";
-    var url = "mailto:" + encodeURIComponent(to) +
+    return "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) +
+      "&su=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+
+  function buildAskMailtoUrl(body) {
+    var to = ASK_EMAIL_TO || FALLBACK_ASK_EMAIL;
+    var subject = "JOB HUB SEARCH ASK";
+    return "mailto:" + encodeURIComponent(to) +
       "?subject=" + encodeURIComponent(subject) +
-      "&body=" + encodeURIComponent(lastAskPacket);
-    window.location.href = url;
+      "&body=" + encodeURIComponent(body);
+  }
+
+  function emailAskPacket() {
+    lastAskPacket = buildAskPacket();
+    showAskPacket();
+    var body = lastAskPacket;
+    var gmail = buildAskGmailUrl(body);
+    var opened = null;
+    try {
+      opened = window.open(gmail, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      opened = null;
+    }
+    if (!opened) {
+      window.location.href = buildAskMailtoUrl(body);
+      toast("Opening mail compose");
+    } else {
+      toast("Opening Gmail to Brandon");
+    }
+    if (getSearchQuery()) {
+      rememberSearch(getSearchQuery(), getSearchLocation());
+      renderRecentSearches();
+    }
+  }
+
+  /* ---------- From Job Search inbox ---------- */
+  function loadInboxSeen() {
+    try {
+      var raw = localStorage.getItem(INBOX_SEEN_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveInboxSeen(ids) {
+    var uniq = [];
+    (ids || []).forEach(function (id) {
+      if (id && uniq.indexOf(id) === -1) uniq.push(id);
+    });
+    localStorage.setItem(INBOX_SEEN_KEY, JSON.stringify(uniq));
+  }
+
+  function isInboxUnread(id) {
+    return loadInboxSeen().indexOf(id) === -1;
+  }
+
+  function markInboxRead(id) {
+    if (!id) return;
+    var seen = loadInboxSeen();
+    if (seen.indexOf(id) === -1) {
+      seen.push(id);
+      saveInboxSeen(seen);
+    }
+  }
+
+  function normalizeInboxPayload(data) {
+    if (!data) return null;
+    if (Array.isArray(data.messages)) {
+      return {
+        version: data.version || 1,
+        updatedAt: data.updatedAt || "",
+        messages: data.messages.slice()
+      };
+    }
+    if (data.id && (data.body != null || data.subject != null || data.actions)) {
+      return {
+        version: 1,
+        updatedAt: data.createdAt || "",
+        messages: [data]
+      };
+    }
+    return null;
+  }
+
+  function mergeInboxData(incoming) {
+    var norm = normalizeInboxPayload(incoming);
+    if (!norm) throw new Error("Invalid inbox JSON");
+    var byId = {};
+    (assistantInbox.messages || []).forEach(function (m) {
+      if (m && m.id) byId[m.id] = m;
+    });
+    norm.messages.forEach(function (m) {
+      if (m && m.id) byId[m.id] = m;
+    });
+    var messages = Object.keys(byId).map(function (k) { return byId[k]; });
+    messages.sort(function (a, b) {
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+    assistantInbox = {
+      version: Math.max(assistantInbox.version || 1, norm.version || 1),
+      updatedAt: norm.updatedAt || assistantInbox.updatedAt || "",
+      messages: messages
+    };
+    return assistantInbox;
+  }
+
+  function setInboxStatus(text) {
+    ["inboxStatusLine", "inboxStatusLineMore"].forEach(function (id) {
+      if ($(id)) $(id).textContent = text || "";
+    });
+  }
+
+  function unreadInboxCount() {
+    return (assistantInbox.messages || []).filter(function (m) {
+      return m && m.id && isInboxUnread(m.id);
+    }).length;
+  }
+
+  function updateInboxBadges() {
+    var n = unreadInboxCount();
+    ["searchInboxBadge", "moreInboxBadge", "homeInboxBadge"].forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      if (n > 0) {
+        el.hidden = false;
+        el.textContent = String(n);
+      } else {
+        el.hidden = true;
+        el.textContent = "0";
+      }
+    });
+  }
+
+  function formatInboxWhen(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso).slice(0, 16);
+      return d.toLocaleString(undefined, {
+        month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+      });
+    } catch (e) {
+      return String(iso).slice(0, 16);
+    }
+  }
+
+  function renderAssistantInboxLists() {
+    var messages = (assistantInbox.messages || []).slice().sort(function (a, b) {
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+    var html;
+    if (!messages.length) {
+      html = '<p style="margin:0;color:var(--muted);font-size:.88rem;">No messages yet. Tap Refresh after Brandon updates the inbox, or Paste reply.</p>';
+    } else {
+      html = messages.map(function (m) {
+        var unread = isInboxUnread(m.id);
+        return (
+          '<button type="button" class="stream-item' + (unread ? " inbox-unread" : "") + '" data-inbox-id="' + escapeAttr(m.id) + '">' +
+            '<div><div class="si-main">' + escapeHtml(m.subject || "(No subject)") +
+            (unread ? ' <span class="badge" data-status="Applied">new</span>' : "") +
+            "</div>" +
+            '<div class="si-sub">' + escapeHtml(m.from || "Rileys Job Search") +
+            (m.createdAt ? " · " + escapeHtml(formatInboxWhen(m.createdAt)) : "") +
+            "</div></div>" +
+          "</button>"
+        );
+      }).join("");
+    }
+    if ($("assistantInboxList")) $("assistantInboxList").innerHTML = html;
+    if ($("assistantInboxListMore")) $("assistantInboxListMore").innerHTML = html;
+    updateInboxBadges();
+  }
+
+  function fetchAssistantInbox(opts) {
+    opts = opts || {};
+    setInboxStatus(opts.silent ? "" : "Refreshing…");
+    var url = "./data/assistant-inbox.json?t=" + Date.now();
+    return fetch(url, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (data) {
+      assistantInbox = normalizeInboxPayload(data) || { version: 1, updatedAt: "", messages: [] };
+      assistantInbox.messages.sort(function (a, b) {
+        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      });
+      renderAssistantInboxLists();
+      var n = (assistantInbox.messages || []).length;
+      setInboxStatus("Updated" + (assistantInbox.updatedAt ? (" · " + formatInboxWhen(assistantInbox.updatedAt)) : "") + " · " + n + " message" + (n === 1 ? "" : "s"));
+      if (!opts.silent) toast("Inbox refreshed");
+      return assistantInbox;
+    }).catch(function (err) {
+      setInboxStatus("Refresh failed — try Paste reply. " + (err && err.message ? err.message : ""));
+      renderAssistantInboxLists();
+      if (!opts.silent) toast("Inbox refresh failed");
+      throw err;
+    });
+  }
+
+  function summarizeActions(actions) {
+    actions = actions || {};
+    var bits = [];
+    var apps = actions.applications || [];
+    var searches = actions.searches || [];
+    if (apps.length) bits.push(apps.length + " application" + (apps.length === 1 ? "" : "s"));
+    if (searches.length) bits.push(searches.length + " search" + (searches.length === 1 ? "" : "es"));
+    if (actions.letterDraft && (actions.letterDraft.subject || actions.letterDraft.body || actions.letterDraft.to)) {
+      bits.push("letter draft");
+    }
+    if (actions.aspiration) bits.push("aspiration");
+    if (actions.journalNote && actions.journalNote.text) bits.push("journal note");
+    return bits;
+  }
+
+  function openInboxMessage(id) {
+    var msg = (assistantInbox.messages || []).find(function (m) { return m.id === id; });
+    if (!msg) {
+      toast("Message not found");
+      return;
+    }
+    viewingInboxMsgId = id;
+    if ($("inboxModalTitle")) $("inboxModalTitle").textContent = msg.subject || "From Job Search";
+    if ($("inboxMsgMeta")) {
+      $("inboxMsgMeta").textContent = (msg.from || "Rileys Job Search") +
+        (msg.createdAt ? " · " + formatInboxWhen(msg.createdAt) : "") +
+        (isInboxUnread(id) ? " · unread" : " · read");
+    }
+    if ($("inboxMsgBody")) $("inboxMsgBody").textContent = msg.body || "";
+    var bits = summarizeActions(msg.actions);
+    var preview = $("inboxActionsPreview");
+    if (preview) {
+      if (!bits.length) {
+        preview.innerHTML = "No structured actions in this message (body only).";
+      } else {
+        var acts = msg.actions || {};
+        var lines = ["Will merge on Apply: " + bits.join(", ") + "."];
+        if ((acts.applications || []).length) {
+          lines.push("<ul>" + acts.applications.slice(0, 6).map(function (a) {
+            return "<li>" + escapeHtml((a.company || "?") + " - " + (a.role || "?")) + "</li>";
+          }).join("") + "</ul>");
+        }
+        preview.innerHTML = lines.join("");
+      }
+    }
+    if ($("inboxModal")) $("inboxModal").hidden = false;
+  }
+
+  function closeInboxModal() {
+    if ($("inboxModal")) $("inboxModal").hidden = true;
+    viewingInboxMsgId = null;
+  }
+
+  function openPasteInboxModal() {
+    if ($("pasteInboxText")) $("pasteInboxText").value = "";
+    if ($("pasteInboxModal")) $("pasteInboxModal").hidden = false;
+  }
+
+  function closePasteInboxModal() {
+    if ($("pasteInboxModal")) $("pasteInboxModal").hidden = true;
+  }
+
+  function appDedupeKey(app) {
+    return [
+      String(app.company || "").trim().toLowerCase(),
+      String(app.role || "").trim().toLowerCase(),
+      String(app.url || "").trim().toLowerCase()
+    ].join("|");
+  }
+
+  function applyInboxMessage(id, alsoMarkRead) {
+    var msg = (assistantInbox.messages || []).find(function (m) { return m.id === id; });
+    if (!msg) {
+      toast("Message not found");
+      return;
+    }
+    var actions = msg.actions || {};
+    var added = { apps: 0, searches: 0, letter: 0, asp: 0, journal: 0, skipped: 0 };
+
+    if (!state.applications) state.applications = [];
+    ensureRecentSearches();
+    ensureAspirations();
+    ensureLetter();
+    ensureDiary();
+
+    var existingKeys = {};
+    state.applications.forEach(function (a) {
+      existingKeys[appDedupeKey(a)] = true;
+    });
+
+    (actions.applications || []).forEach(function (raw) {
+      if (!raw) return;
+      var app = {
+        id: uid("app"),
+        company: String(raw.company || "").trim(),
+        role: String(raw.role || "").trim(),
+        location: String(raw.location || "").trim(),
+        pay: String(raw.pay || "").trim(),
+        status: String(raw.status || "Researching").trim() || "Researching",
+        appliedDate: String(raw.appliedDate || "").trim() || toLocalISODate(),
+        important: false,
+        keepOnBoard: false,
+        url: String(raw.url || "").trim(),
+        notes: String(raw.notes || "").trim(),
+        archived: false
+      };
+      if (!app.company && !app.role) {
+        added.skipped += 1;
+        return;
+      }
+      var key = appDedupeKey(app);
+      if (existingKeys[key]) {
+        added.skipped += 1;
+        return;
+      }
+      existingKeys[key] = true;
+      if (shouldAutoArchive(app)) {
+        app.archived = true;
+        app.archivedAt = toLocalISODate();
+      }
+      state.applications.push(app);
+      added.apps += 1;
+    });
+
+    (actions.searches || []).forEach(function (s) {
+      if (!s) return;
+      var q = String(s.query || "").trim();
+      if (!q) return;
+      var loc = String(s.location || "").trim();
+      rememberSearch(q, loc);
+      // Optional labeled URLs: store as notes on recent item via query suffix only if needed
+      if (s.urls && s.urls.length && state.recentSearches[0] && state.recentSearches[0].query === q) {
+        state.recentSearches[0].urls = (s.urls || []).map(function (u) {
+          return { label: String((u && u.label) || ""), href: String((u && u.href) || "") };
+        }).filter(function (u) { return u.href; });
+      }
+      added.searches += 1;
+    });
+
+    var ld = actions.letterDraft;
+    if (ld && (ld.to || ld.subject || ld.body)) {
+      state.letterDrafts.unshift({
+        id: uid("letter"),
+        to: String(ld.to || ""),
+        subject: String(ld.subject || ""),
+        body: String(ld.body || ""),
+        updatedAt: toLocalISODate()
+      });
+      state.letterDrafts = state.letterDrafts.slice(0, 20);
+      added.letter += 1;
+    }
+
+    if (actions.aspiration && String(actions.aspiration).trim()) {
+      state.aspirations.entries.unshift({
+        id: uid("asp"),
+        date: toLocalISODate(),
+        body: String(actions.aspiration).trim()
+      });
+      added.asp += 1;
+    }
+
+    var jn = actions.journalNote;
+    if (jn && String(jn.text || "").trim()) {
+      var jdate = String(jn.date || "").trim() || toLocalISODate();
+      state.diary.entries.unshift({
+        id: uid("diary"),
+        date: jdate,
+        mood: "",
+        title: jn.important ? "Important" : "From Job Search",
+        body: String(jn.text).trim(),
+        important: !!jn.important
+      });
+      added.journal += 1;
+    }
+
+    saveLocal();
+    if (alsoMarkRead) markInboxRead(id);
+    renderJobs();
+    renderJobBoard();
+    renderCalendar();
+    renderDiary();
+    renderRecentSearches();
+    renderAspirations();
+    renderLetter();
+    renderAssistantInboxLists();
+    if ($("inboxMsgMeta") && viewingInboxMsgId === id) {
+      $("inboxMsgMeta").textContent = (msg.from || "Rileys Job Search") +
+        (msg.createdAt ? " · " + formatInboxWhen(msg.createdAt) : "") +
+        (isInboxUnread(id) ? " · unread" : " · read");
+    }
+
+    var parts = [];
+    if (added.apps) parts.push(added.apps + " app" + (added.apps === 1 ? "" : "s"));
+    if (added.searches) parts.push(added.searches + " search" + (added.searches === 1 ? "" : "es"));
+    if (added.letter) parts.push("letter");
+    if (added.asp) parts.push("aspiration");
+    if (added.journal) parts.push("journal");
+    if (added.skipped) parts.push(added.skipped + " skipped");
+    toast(parts.length ? ("Applied: " + parts.join(", ")) : "Nothing new to apply");
+  }
+
+  function handlePasteInbox() {
+    var raw = ($("pasteInboxText") && $("pasteInboxText").value) || "";
+    raw = raw.trim();
+    if (!raw) {
+      toast("Paste JSON first");
+      return;
+    }
+    try {
+      var data = JSON.parse(raw);
+      mergeInboxData(data);
+      renderAssistantInboxLists();
+      setInboxStatus("Loaded from paste · " + (assistantInbox.messages || []).length + " message(s)");
+      closePasteInboxModal();
+      toast("Paste loaded");
+    } catch (err) {
+      toast("Invalid JSON");
+    }
   }
 
   /* ---------- Resume drawer (persistent peek) ---------- */
@@ -2410,6 +2830,7 @@
     renderDiary();
     renderHome();
     renderJobSearch();
+    renderAssistantInboxLists();
     renderAspirations();
     renderLetter();
     setProfileView(profileView);
@@ -2524,6 +2945,62 @@
     if ($("btnCopyAskPacket")) $("btnCopyAskPacket").addEventListener("click", copyAskPacket);
     if ($("btnShareAskPacket")) $("btnShareAskPacket").addEventListener("click", shareAskPacket);
     if ($("btnEmailAskPacket")) $("btnEmailAskPacket").addEventListener("click", emailAskPacket);
+    if ($("btnEmailJobSearch")) $("btnEmailJobSearch").addEventListener("click", emailAskPacket);
+    if ($("btnHomeEmailJobSearch")) $("btnHomeEmailJobSearch").addEventListener("click", function () {
+      switchTab("search");
+      emailAskPacket();
+    });
+    if ($("btnSearchResumePeek2")) $("btnSearchResumePeek2").addEventListener("click", function () { peekResume(false); });
+
+    function bindInboxList(el) {
+      if (!el) return;
+      el.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-inbox-id]");
+        if (!btn) return;
+        openInboxMessage(btn.getAttribute("data-inbox-id"));
+      });
+    }
+    bindInboxList($("assistantInboxList"));
+    bindInboxList($("assistantInboxListMore"));
+    if ($("btnRefreshInbox")) $("btnRefreshInbox").addEventListener("click", function () { fetchAssistantInbox(); });
+    if ($("btnRefreshInboxMore")) $("btnRefreshInboxMore").addEventListener("click", function () { fetchAssistantInbox(); });
+    if ($("btnPasteInboxReply")) $("btnPasteInboxReply").addEventListener("click", openPasteInboxModal);
+    if ($("btnPasteInboxReplyMore")) $("btnPasteInboxReplyMore").addEventListener("click", openPasteInboxModal);
+    if ($("btnCloseInboxModal")) $("btnCloseInboxModal").addEventListener("click", closeInboxModal);
+    if ($("inboxModal")) {
+      $("inboxModal").addEventListener("click", function (e) {
+        if (e.target === $("inboxModal")) closeInboxModal();
+      });
+    }
+    if ($("btnClosePasteInbox")) $("btnClosePasteInbox").addEventListener("click", closePasteInboxModal);
+    if ($("pasteInboxModal")) {
+      $("pasteInboxModal").addEventListener("click", function (e) {
+        if (e.target === $("pasteInboxModal")) closePasteInboxModal();
+      });
+    }
+    if ($("btnPasteInboxApply")) $("btnPasteInboxApply").addEventListener("click", handlePasteInbox);
+    if ($("btnApplyInboxMsg")) {
+      $("btnApplyInboxMsg").addEventListener("click", function () {
+        if (viewingInboxMsgId) applyInboxMessage(viewingInboxMsgId, false);
+      });
+    }
+    if ($("btnApplyInboxMsgRead")) {
+      $("btnApplyInboxMsgRead").addEventListener("click", function () {
+        if (viewingInboxMsgId) {
+          applyInboxMessage(viewingInboxMsgId, true);
+          closeInboxModal();
+        }
+      });
+    }
+    if ($("btnMarkInboxRead")) {
+      $("btnMarkInboxRead").addEventListener("click", function () {
+        if (!viewingInboxMsgId) return;
+        markInboxRead(viewingInboxMsgId);
+        renderAssistantInboxLists();
+        openInboxMessage(viewingInboxMsgId);
+        toast("Marked read");
+      });
+    }
 
     if ($("btnCloseResumeDrawer")) $("btnCloseResumeDrawer").addEventListener("click", closeResumeDrawer);
     if ($("btnDrawerOpenResume")) {
@@ -2963,6 +3440,7 @@
       state = mergeState(server, local);
       if (!local) saveLocal();
       if (isUnlocked()) renderAll();
+      fetchAssistantInbox({ silent: true }).catch(function () {});
     }).catch(function () {
       if (local) {
         state = local;
@@ -2973,6 +3451,7 @@
       } else if (isUnlocked()) {
         toast("Could not load app data");
       }
+      fetchAssistantInbox({ silent: true }).catch(function () {});
     });
   }
 
