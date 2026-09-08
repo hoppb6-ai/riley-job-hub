@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Job Hub">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="Riley Job Hub — resume-first job search: applications, journal, aspirations, and draft letters.">
+  <meta name="description" content="Riley Job Hub — resume-first job search: find jobs, applications, journal, aspirations, and draft letters.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -48,7 +48,7 @@
         <div class="logo" aria-hidden="true">R</div>
         <div class="brand">
           <h1>Riley Job Hub</h1>
-          <p>Resume · jobs · journal · letters</p>
+          <p>Resume · search · jobs · letters</p>
         </div>
         <button type="button" class="resume-pill" id="btnResumePeek" aria-label="Peek resume">
           <span class="resume-pill-ico" aria-hidden="true">📄</span>
@@ -59,7 +59,7 @@
         <span data-path="home">Home</span>
         <span data-path="board">Jobs</span>
         <span data-path="resume">Resume</span>
-        <span data-path="diary">Journal</span>
+        <span data-path="search">Search</span>
         <span data-path="more">More</span>
       </div>
       <div class="ios-tip" id="iosTip">
@@ -86,6 +86,11 @@
             <span class="home-tile-ico" aria-hidden="true">💼</span>
             <strong>Jobs</strong>
             <span>Board · applications · calendar</span>
+          </button>
+          <button type="button" class="home-tile home-tile-search" data-jump="search">
+            <span class="home-tile-ico" aria-hidden="true">🔍</span>
+            <strong>Job Search</strong>
+            <span>Find openings from your resume</span>
           </button>
           <button type="button" class="home-tile" data-jump="diary">
             <span class="home-tile-ico" aria-hidden="true">📝</span>
@@ -487,11 +492,63 @@
         </div>
       </section>
 
+
+      <section class="tab-panel" id="panel-search" data-tab="search" hidden>
+        <div class="search-hero">
+          <p class="home-kicker">Resume-aware search</p>
+          <h2 class="home-headline">Find jobs</h2>
+          <p class="home-sub">Suggestions come from your resume target, skills, and location. Peek resume anytime from the orange pill.</p>
+        </div>
+
+        <div class="card search-bar-card">
+          <label class="search-prompt" for="jobSearchInput">What kind of work are you looking for?</label>
+          <input id="jobSearchInput" type="search" maxlength="120" autocomplete="off" placeholder="e.g. Budtender, CNA, childcare">
+          <p class="search-loc-line" id="searchLocLine"></p>
+          <div class="chips search-suggest-chips" id="searchSuggestChips" aria-label="Suggestions from resume"></div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button type="button" class="ghost small" id="btnSearchResumePeek">Peek resume</button>
+            <button type="button" class="small" id="btnClearSearchQuery">Clear</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h2>Suggested live searches</h2>
+          </div>
+          <p class="search-query-preview" id="searchQueryPreview">Type or tap a chip to build links.</p>
+          <div class="live-search-list" id="liveSearchLinks"></div>
+        </div>
+
+        <div class="card" id="recentSearchesCard">
+          <div class="section-title">
+            <h2>Recent searches</h2>
+            <button type="button" class="small ghost" id="btnClearRecentSearches">Clear</button>
+          </div>
+          <div id="recentSearchesList"></div>
+        </div>
+
+        <div class="card ask-search-card">
+          <div class="section-title"><h2>Ask Job Search assistant</h2></div>
+          <p class="ask-search-lead">This PWA cannot call Grok Bot directly. Build a packet you can paste into Brandon&apos;s Rileys Job Search chat.</p>
+          <button type="button" class="primary" id="btnAskJobSearch">Ask Job Search assistant</button>
+          <div id="askPacketBox" class="ask-packet-box" hidden>
+            <pre class="ask-packet-pre" id="askPacketPreview"></pre>
+            <div class="btn-row">
+              <button type="button" class="primary small" id="btnCopyAskPacket">Copy ask</button>
+              <button type="button" class="small" id="btnShareAskPacket">Share</button>
+              <button type="button" class="small" id="btnEmailAskPacket">Email ask</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="tab-panel" id="panel-more" data-tab="more" hidden>
         <div class="card path-card">
           <h2>More</h2>
-          <p>Calendar, full job list, profile, and tools. Resume lives in the tab bar — always one tap away.</p>
+          <p>Journal, calendar, full job list, profile, and tools. Resume and Search stay in the tab bar.</p>
           <div class="path-steps">
+            <button type="button" class="path-step" data-jump="search"><strong>Job Search</strong><span>Live board links</span></button>
+            <button type="button" class="path-step" data-jump="diary"><strong>Journal</strong><span>Day notes &amp; flags</span></button>
             <button type="button" class="path-step" data-jump="calendar"><strong>Calendar</strong><span>Month &amp; agenda</span></button>
             <button type="button" class="path-step" data-jump="jobs"><strong>Jobs list</strong><span>Filters &amp; archive</span></button>
             <button type="button" class="path-step" data-jump="profile"><strong>Profile</strong><span>Contact &amp; backup</span></button>
@@ -519,8 +576,8 @@
       <button type="button" data-tab-btn="resume" aria-selected="false">
         <span class="ico" aria-hidden="true">📄</span>Resume
       </button>
-      <button type="button" data-tab-btn="diary" aria-selected="false">
-        <span class="ico" aria-hidden="true">📝</span>Journal
+      <button type="button" data-tab-btn="search" aria-selected="false">
+        <span class="ico" aria-hidden="true">🔍</span>Search
       </button>
       <button type="button" data-tab-btn="more" aria-selected="false">
         <span class="ico" aria-hidden="true">⋯</span>More

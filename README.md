@@ -63,9 +63,11 @@ Open `http://localhost:8765/` in a browser. Service workers need a secure contex
 
 All source files use ASCII characters only (no fancy punctuation in code).
 
-## IA (v13)
+## IA (v14)
 
 - Home hub after PIN unlock
 - Resume is persistent (bottom nav + topbar peek drawer + insert into letters)
 - Journal (renamed from Diary), Aspirations, Draft Letter (Gmail)
 - Theme tokens centralized in `:root` CSS variables
+- Job Search: resume-aware live board links + Ask assistant handoff packet
+- Bottom nav: Home | Jobs | Resume | Search | More (Journal under More)

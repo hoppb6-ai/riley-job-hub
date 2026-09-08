@@ -1605,6 +1605,118 @@ button.icon-btn {
   font-weight: 600;
 }
 
+
+/* ---- Job Search ---- */
+.home-tile-search {
+  border-color: color-mix(in srgb, var(--moss) 45%, var(--border));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--moss) 14%, var(--bg-card)), var(--bg-card));
+}
+.search-hero { margin: 0 0 var(--space-4); }
+.search-bar-card .search-prompt {
+  display: block;
+  margin: 0 0 var(--space-3);
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+#jobSearchInput {
+  font-size: 1.05rem;
+  min-height: 52px;
+  margin-bottom: var(--space-2);
+}
+.search-loc-line {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.search-suggest-chips .chip {
+  cursor: pointer;
+}
+.search-suggest-chips .chip.on {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent-text);
+}
+.search-query-preview {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+.search-query-preview strong { color: var(--text); }
+.live-search-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.live-search-link {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text);
+  text-decoration: none;
+  font: inherit;
+  box-shadow: var(--shadow-soft);
+}
+.live-search-link:active { transform: scale(0.99); }
+.live-search-link .ls-name {
+  font-weight: 750;
+  color: var(--accent-text);
+}
+.live-search-link .ls-url {
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-all;
+  line-height: 1.35;
+}
+.recent-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+.recent-search-item button.recent-q {
+  flex: 1;
+  text-align: left;
+  min-height: 44px;
+}
+.ask-search-lead {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.ask-packet-box { margin-top: var(--space-3); }
+.ask-packet-pre {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 .tabbar-5 button {
   font-size: 0.65rem;
   padding: 4px 2px;

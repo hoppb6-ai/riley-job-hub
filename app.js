@@ -95,7 +95,9 @@
     if (local.aspirations) out.aspirations = local.aspirations;
     if (local.letterDrafts) out.letterDrafts = local.letterDrafts;
     if (local.currentLetter) out.currentLetter = local.currentLetter;
+    if (local.recentSearches) out.recentSearches = local.recentSearches;
     if (!out.calendarEvents) out.calendarEvents = [];
+    if (!out.recentSearches) out.recentSearches = [];
     if (!out.diary) {
       out.diary = server.diary || { interests: "", patterns: "", desires: "", entries: [] };
     }
@@ -130,7 +132,7 @@
 
   function navHighlightFor(name) {
     if (name === "jobs" || name === "calendar") return "board";
-    if (name === "aspirations" || name === "letter" || name === "profile") return "more";
+    if (name === "aspirations" || name === "letter" || name === "profile" || name === "diary") return "more";
     return name;
   }
 
@@ -142,8 +144,8 @@
     var navName = navHighlightFor(name);
     document.querySelectorAll("[data-tab-btn]").forEach(function (b) {
       var on = b.getAttribute("data-tab-btn") === navName || b.getAttribute("data-tab-btn") === name;
-      // Prefer exact match for home/resume/diary; jobs-list maps to board nav
-      if (name === "jobs" || name === "calendar" || name === "aspirations" || name === "letter" || name === "profile") {
+      // Prefer exact match for home/resume/search; secondary screens map to board/more
+      if (name === "jobs" || name === "calendar" || name === "aspirations" || name === "letter" || name === "profile" || name === "diary") {
         on = b.getAttribute("data-tab-btn") === navName;
       } else {
         on = b.getAttribute("data-tab-btn") === name;
@@ -154,13 +156,15 @@
     document.querySelectorAll("#orgPath [data-path]").forEach(function (s) {
       var path = s.getAttribute("data-path");
       var on = path === name || (path === "board" && (name === "jobs" || name === "calendar")) ||
-        (path === "more" && (name === "aspirations" || name === "letter" || name === "profile"));
+        (path === "more" && (name === "aspirations" || name === "letter" || name === "profile" || name === "diary")) ||
+        (path === "search" && name === "search");
       s.classList.toggle("on", on);
     });
     if (name === "home") renderHome();
     if (name === "board") renderJobBoard();
     if (name === "calendar") renderCalendar();
     if (name === "diary") renderDiary();
+    if (name === "search") renderJobSearch();
     if (name === "aspirations") renderAspirations();
     if (name === "letter") renderLetter();
     if (name === "resume") {
@@ -834,6 +838,283 @@
           }).join("")
         : '<span style="color:var(--muted);font-size:.88rem;">Add strengths on Resume</span>';
     }
+  }
+
+
+  /* ---------- Job Search ---------- */
+  var FALLBACK_ASK_EMAIL = "Hoppb6@gmail.com";
+  var MAX_RECENT_SEARCHES = 8;
+  var searchPrefillDone = false;
+  var lastAskPacket = "";
+
+  function ensureRecentSearches() {
+    if (!state.recentSearches || !Array.isArray(state.recentSearches)) {
+      state.recentSearches = [];
+    }
+  }
+
+  function getSearchLocation() {
+    var addr = (state.profile && state.profile.address) || "";
+    var m = String(addr).match(/,\s*([^,]+),\s*([A-Z]{2})\b/);
+    if (m) return m[1].trim() + ", " + m[2];
+    if (/\bGrand Rapids\b/i.test(addr) && /\bMI\b/.test(addr)) return "Grand Rapids, MI";
+    if (/\bMI\b/.test(addr) || /Michigan/i.test(addr)) return "Michigan";
+    return "";
+  }
+
+  function getSearchSkills() {
+    var r = state.resume || {};
+    var strengths = (r.strengths || []).slice();
+    if (!strengths.length && r.skills) {
+      strengths = String(r.skills).split(/[,\n]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    return strengths.slice(0, 8);
+  }
+
+  function getSearchQuery() {
+    var input = $("jobSearchInput");
+    return input ? String(input.value || "").trim() : "";
+  }
+
+  function buildLiveSearches(query, location) {
+    var q = String(query || "").trim();
+    var loc = String(location || "").trim();
+    var qEnc = encodeURIComponent(q);
+    var locEnc = encodeURIComponent(loc);
+    var googleParts = [q, "jobs"];
+    if (loc) googleParts.push(loc);
+    var googleQ = encodeURIComponent(googleParts.filter(Boolean).join(" "));
+    var links = [
+      {
+        name: "Indeed",
+        url: "https://www.indeed.com/jobs?q=" + qEnc + (loc ? "&l=" + locEnc : "")
+      },
+      {
+        name: "LinkedIn Jobs",
+        url: "https://www.linkedin.com/jobs/search/?keywords=" + qEnc + (loc ? "&location=" + locEnc : "")
+      },
+      {
+        name: "Google Jobs",
+        url: "https://www.google.com/search?ibp=htl;jobs&q=" + googleQ
+      },
+      {
+        name: "ZipRecruiter",
+        url: "https://www.ziprecruiter.com/jobs-search?search=" + qEnc + (loc ? "&location=" + locEnc : "")
+      }
+    ];
+    var miLoc = loc && /MI|Michigan|Grand Rapids/i.test(loc) ? loc : "Michigan";
+    links.push({
+      name: "Indeed · Michigan / local",
+      url: "https://www.indeed.com/jobs?q=" + qEnc + "&l=" + encodeURIComponent(miLoc)
+    });
+    return links;
+  }
+
+  function rememberSearch(query, location) {
+    var q = String(query || "").trim();
+    if (!q) return;
+    ensureRecentSearches();
+    var loc = String(location || "").trim();
+    state.recentSearches = state.recentSearches.filter(function (item) {
+      return !(item && item.query === q && (item.location || "") === loc);
+    });
+    state.recentSearches.unshift({
+      query: q,
+      location: loc,
+      at: toLocalISODate()
+    });
+    state.recentSearches = state.recentSearches.slice(0, MAX_RECENT_SEARCHES);
+    saveLocal();
+  }
+
+  function renderLiveSearchLinks() {
+    var wrap = $("liveSearchLinks");
+    var preview = $("searchQueryPreview");
+    if (!wrap) return;
+    var q = getSearchQuery();
+    var loc = getSearchLocation();
+    if (!q) {
+      if (preview) {
+        preview.innerHTML = "Type a role or tap a chip — live board links appear here.";
+      }
+      wrap.innerHTML = '<p style="margin:0;color:var(--muted);font-size:.88rem;">Waiting for a search query.</p>';
+      return;
+    }
+    var links = buildLiveSearches(q, loc);
+    if (preview) {
+      preview.innerHTML = "Query: <strong>" + escapeHtml(q) + "</strong>" +
+        (loc ? " · Location: <strong>" + escapeHtml(loc) + "</strong>" : "");
+    }
+    wrap.innerHTML = links.map(function (link) {
+      return '<a class="live-search-link" href="' + escapeAttr(link.url) + '" target="_blank" rel="noopener noreferrer" data-live-search="1">' +
+        '<span class="ls-name">' + escapeHtml(link.name) + "</span>" +
+        '<span class="ls-url">' + escapeHtml(link.url) + "</span>" +
+        "</a>";
+    }).join("");
+  }
+
+  function renderSearchSuggestChips() {
+    var wrap = $("searchSuggestChips");
+    if (!wrap || !state) return;
+    var r = state.resume || {};
+    var chips = [];
+    if (r.targetRole) chips.push({ kind: "target", label: r.targetRole, value: r.targetRole });
+    getSearchSkills().forEach(function (s) {
+      chips.push({ kind: "skill", label: s, value: s });
+    });
+    var loc = getSearchLocation();
+    if (loc) chips.push({ kind: "loc", label: loc, value: loc });
+    if (!chips.length) {
+      wrap.innerHTML = '<span style="color:var(--muted);font-size:.88rem;">Add a target role or strengths on Resume</span>';
+      return;
+    }
+    wrap.innerHTML = chips.map(function (c) {
+      return '<button type="button" class="chip' + (c.kind === "target" ? " on" : "") + '" data-search-chip="' +
+        escapeAttr(c.kind) + '" data-chip-value="' + escapeAttr(c.value) + '">' +
+        escapeHtml(c.label) + "</button>";
+    }).join("");
+  }
+
+  function renderRecentSearches() {
+    var list = $("recentSearchesList");
+    if (!list || !state) return;
+    ensureRecentSearches();
+    if (!state.recentSearches.length) {
+      list.innerHTML = '<p style="margin:0;color:var(--muted);font-size:.88rem;">No recent searches yet.</p>';
+      return;
+    }
+    list.innerHTML = state.recentSearches.map(function (item, idx) {
+      var label = item.query + (item.location ? " · " + item.location : "");
+      return '<div class="recent-search-item">' +
+        '<button type="button" class="ghost recent-q" data-recent-idx="' + idx + '">' +
+        escapeHtml(label) + "</button>" +
+        '<button type="button" class="small danger" data-del-recent="' + idx + '" aria-label="Remove">X</button>' +
+        "</div>";
+    }).join("");
+  }
+
+  function renderJobSearch() {
+    if (!state) return;
+    var locLine = $("searchLocLine");
+    var loc = getSearchLocation();
+    if (locLine) {
+      locLine.textContent = loc
+        ? ("Location from profile: " + loc)
+        : "Add city/state on Profile to bias local results (e.g. Grand Rapids, MI).";
+    }
+    var input = $("jobSearchInput");
+    if (input && !searchPrefillDone) {
+      var target = (state.resume && state.resume.targetRole) || "";
+      if (!input.value && target) input.value = target;
+      searchPrefillDone = true;
+    }
+    renderSearchSuggestChips();
+    renderLiveSearchLinks();
+    renderRecentSearches();
+  }
+
+  function applySearchChip(kind, value) {
+    var input = $("jobSearchInput");
+    if (!input) return;
+    value = String(value || "").trim();
+    if (!value) return;
+    if (kind === "loc") {
+      // location is always from profile; chip is informational / reinforces query with city
+      var cur = input.value.trim();
+      if (cur && cur.toLowerCase().indexOf(value.toLowerCase()) === -1) {
+        input.value = cur + " " + value;
+      } else if (!cur) {
+        input.value = ((state.resume && state.resume.targetRole) || "") + (value ? " " + value : "");
+        input.value = input.value.trim();
+      }
+    } else if (kind === "target") {
+      input.value = value;
+    } else {
+      var q = input.value.trim();
+      if (!q) input.value = value;
+      else if (q.toLowerCase().indexOf(value.toLowerCase()) === -1) input.value = q + " " + value;
+    }
+    renderLiveSearchLinks();
+  }
+
+  function buildAskPacket() {
+    var q = getSearchQuery();
+    var loc = getSearchLocation();
+    var r = state.resume || {};
+    var skills = getSearchSkills().slice(0, 5);
+    var links = q ? buildLiveSearches(q, loc).slice(0, 5) : [];
+    var lines = [
+      "JOB HUB SEARCH ASK",
+      "",
+      "Query: " + (q || "(empty)"),
+      "Resume target: " + (r.targetRole || "(none)"),
+      "Top skills: " + (skills.length ? skills.join(", ") : "(none)"),
+      "Location: " + (loc || "(none)"),
+      ""
+    ];
+    if (links.length) {
+      lines.push("Live search URLs:");
+      links.forEach(function (link) {
+        lines.push("- " + link.name + ": " + link.url);
+      });
+    } else {
+      lines.push("Live search URLs: (type a query first)");
+    }
+    lines.push("");
+    lines.push("Please help refine this job search and suggest next steps.");
+    return lines.join("\n");
+  }
+
+  function showAskPacket() {
+    lastAskPacket = buildAskPacket();
+    var box = $("askPacketBox");
+    var pre = $("askPacketPreview");
+    if (pre) pre.textContent = lastAskPacket;
+    if (box) box.hidden = false;
+    if (getSearchQuery()) {
+      rememberSearch(getSearchQuery(), getSearchLocation());
+      renderRecentSearches();
+    }
+  }
+
+  function copyAskPacket() {
+    if (!lastAskPacket) lastAskPacket = buildAskPacket();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lastAskPacket).then(function () {
+        toast("Ask copied");
+      }).catch(function () {
+        toast("Copy failed");
+      });
+    } else {
+      toast("Clipboard unavailable");
+    }
+  }
+
+  function shareAskPacket() {
+    if (!lastAskPacket) lastAskPacket = buildAskPacket();
+    if (navigator.share) {
+      navigator.share({
+        title: "JOB HUB SEARCH ASK",
+        text: lastAskPacket
+      }).then(function () {
+        toast("Shared");
+      }).catch(function () {
+        /* user cancel or fail — ignore */
+      });
+    } else {
+      toast("Share not available — use Copy ask");
+    }
+  }
+
+  function emailAskPacket() {
+    if (!lastAskPacket) lastAskPacket = buildAskPacket();
+    var profileEmail = (state.profile && state.profile.email) || "";
+    var to = String(profileEmail).trim() || FALLBACK_ASK_EMAIL;
+    var subject = "JOB HUB SEARCH ASK";
+    var url = "mailto:" + encodeURIComponent(to) +
+      "?subject=" + encodeURIComponent(subject) +
+      "&body=" + encodeURIComponent(lastAskPacket);
+    window.location.href = url;
   }
 
   /* ---------- Resume drawer (persistent peek) ---------- */
@@ -2128,6 +2409,7 @@
     renderJobBoard();
     renderDiary();
     renderHome();
+    renderJobSearch();
     renderAspirations();
     renderLetter();
     setProfileView(profileView);
@@ -2165,6 +2447,84 @@
     if ($("btnLetterResumePeek")) $("btnLetterResumePeek").addEventListener("click", function () { peekResume(true); });
     if ($("btnAspirationsResumePeek")) $("btnAspirationsResumePeek").addEventListener("click", function () { peekResume(false); });
     if ($("btnJobResumePeek")) $("btnJobResumePeek").addEventListener("click", function () { peekResume(false); });
+
+    /* Job Search */
+    if ($("btnSearchResumePeek")) {
+      $("btnSearchResumePeek").addEventListener("click", function () { peekResume(false); });
+    }
+    if ($("jobSearchInput")) {
+      $("jobSearchInput").addEventListener("input", function () {
+        renderLiveSearchLinks();
+      });
+      $("jobSearchInput").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          renderLiveSearchLinks();
+          if (getSearchQuery()) {
+            rememberSearch(getSearchQuery(), getSearchLocation());
+            renderRecentSearches();
+          }
+        }
+      });
+    }
+    if ($("searchSuggestChips")) {
+      $("searchSuggestChips").addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-search-chip]");
+        if (!btn) return;
+        applySearchChip(btn.getAttribute("data-search-chip"), btn.getAttribute("data-chip-value"));
+      });
+    }
+    if ($("liveSearchLinks")) {
+      $("liveSearchLinks").addEventListener("click", function (e) {
+        var a = e.target.closest("[data-live-search]");
+        if (!a) return;
+        if (getSearchQuery()) {
+          rememberSearch(getSearchQuery(), getSearchLocation());
+          renderRecentSearches();
+        }
+      });
+    }
+    if ($("btnClearSearchQuery")) {
+      $("btnClearSearchQuery").addEventListener("click", function () {
+        if ($("jobSearchInput")) $("jobSearchInput").value = "";
+        renderLiveSearchLinks();
+      });
+    }
+    if ($("btnClearRecentSearches")) {
+      $("btnClearRecentSearches").addEventListener("click", function () {
+        ensureRecentSearches();
+        state.recentSearches = [];
+        saveLocal();
+        renderRecentSearches();
+        toast("Recent cleared");
+      });
+    }
+    if ($("recentSearchesList")) {
+      $("recentSearchesList").addEventListener("click", function (e) {
+        var del = e.target.closest("[data-del-recent]");
+        if (del) {
+          var di = Number(del.getAttribute("data-del-recent"));
+          ensureRecentSearches();
+          if (!isNaN(di)) state.recentSearches.splice(di, 1);
+          saveLocal();
+          renderRecentSearches();
+          return;
+        }
+        var rec = e.target.closest("[data-recent-idx]");
+        if (!rec) return;
+        var ri = Number(rec.getAttribute("data-recent-idx"));
+        ensureRecentSearches();
+        var item = state.recentSearches[ri];
+        if (!item) return;
+        if ($("jobSearchInput")) $("jobSearchInput").value = item.query || "";
+        renderLiveSearchLinks();
+      });
+    }
+    if ($("btnAskJobSearch")) $("btnAskJobSearch").addEventListener("click", showAskPacket);
+    if ($("btnCopyAskPacket")) $("btnCopyAskPacket").addEventListener("click", copyAskPacket);
+    if ($("btnShareAskPacket")) $("btnShareAskPacket").addEventListener("click", shareAskPacket);
+    if ($("btnEmailAskPacket")) $("btnEmailAskPacket").addEventListener("click", emailAskPacket);
+
     if ($("btnCloseResumeDrawer")) $("btnCloseResumeDrawer").addEventListener("click", closeResumeDrawer);
     if ($("btnDrawerOpenResume")) {
       $("btnDrawerOpenResume").addEventListener("click", function () {

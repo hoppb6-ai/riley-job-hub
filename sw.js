@@ -1,4 +1,4 @@
-const CACHE = "riley-job-hub-v13";
+const CACHE = "riley-job-hub-v14";
 const ASSETS = [
   "./",
   "./index.html",
